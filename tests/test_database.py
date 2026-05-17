@@ -1,3 +1,5 @@
+import sqlite3
+from contextlib import closing
 from datetime import datetime
 
 import pytest
@@ -6,6 +8,7 @@ from database import (
     Listing,
     add_listing,
     deactivate_listing,
+    expire_old_listings,
     get_matching_haves,
     get_matching_wants,
     get_user_listings,
@@ -176,5 +179,47 @@ def test_deactivated_listing_not_in_user_listings(db):
     )
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
     deactivate_listing(db, listing_id, user_id=1)
+    listings = get_user_listings(db, user_id=1)
+    assert len(listings) == 1
+
+
+def test_expire_old_haves(db):
+    # game_datetime in the past
+    past_dt = datetime(2020, 1, 1, 12, 0)
+    _, listing_id = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, past_dt, user_id=1
+    )
+    expire_old_listings(db)
+    listings = get_user_listings(db, user_id=1)
+    assert len(listings) == 0
+
+
+def test_future_have_not_expired(db):
+    future_dt = datetime(2099, 1, 1, 12, 0)
+    _, listing_id = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, future_dt, user_id=1
+    )
+    expire_old_listings(db)
+    listings = get_user_listings(db, user_id=1)
+    assert len(listings) == 1
+
+
+def test_expire_old_wants(db):
+    _, listing_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
+    # manually backdate posted_at
+    with closing(sqlite3.connect(db)) as conn:
+        with conn:
+            conn.execute(
+                "UPDATE listings SET posted_at = ? WHERE id = ?",
+                (datetime(2020, 1, 1).isoformat(), listing_id),
+            )
+    expire_old_listings(db)
+    listings = get_user_listings(db, user_id=1)
+    assert len(listings) == 0
+
+
+def test_recent_want_not_expired(db):
+    make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
+    expire_old_listings(db)
     listings = get_user_listings(db, user_id=1)
     assert len(listings) == 1

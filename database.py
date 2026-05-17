@@ -1,7 +1,7 @@
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from enums import ListingType, Sport
@@ -191,3 +191,18 @@ def get_matching_haves(
             cursor.execute(query, params)
             rows = cursor.fetchall()
     return rows
+
+
+def expire_old_listings(db_path):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                UPDATE listings SET is_active = 0 WHERE is_active = 1 AND (
+                    (listing_type = 'have' AND game_datetime < ?)
+                    OR
+                    (listing_type = 'want' AND posted_at < ?)
+                )
+                """,
+                (datetime.now(), (datetime.now() - timedelta(days=182)).isoformat()),
+            )
