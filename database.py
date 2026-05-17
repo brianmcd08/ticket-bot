@@ -116,6 +116,7 @@ def deactivate_listing(db_path, listing_id, user_id=None):
 
 def get_user_listings(db_path, user_id):
     with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
         with conn:
             cursor = conn.cursor()
             cursor.execute(
