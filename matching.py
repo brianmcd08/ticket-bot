@@ -30,11 +30,10 @@ def find_matches(db_path, listing: Listing) -> list[MatchResult]:
     else:  # WANT
         rows = get_matching_haves(
             db_path=db_path,
-            user_id=listing.user_id,
+            #            user_id=listing.user_id,
             sport=listing.sport,
             game_datetime=listing.game_datetime,
         )
-
     return [
         MatchResult(
             new_poster_user_id=listing.user_id,

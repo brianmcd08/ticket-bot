@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
-from enums import ListingType, Sport
+from enums import ListingStatus, ListingType, Sport
 
 
 @dataclass
@@ -16,7 +16,7 @@ class Listing:
     quantity: Optional[int]
     notes: Optional[str]
     posted_at: str
-    is_active: int = 1
+    status: ListingStatus = ListingStatus.OPEN
     message_id: int = 0
 
     # helper methods for datetime conversion
@@ -47,7 +47,7 @@ def init_db(db_path):
                     notes TEXT,
                     message_id INTEGER NOT NULL DEFAULT 0,
                     posted_at TEXT NOT NULL,
-                    is_active INTEGER NOT NULL DEFAULT 1
+                    status INTEGER NOT NULL DEFAULT 1
                 )
             """)
 
@@ -101,19 +101,6 @@ def update_message_id(db_path, listing_id, message_id):
             )
 
 
-def deactivate_listing(db_path, listing_id, user_id=None):
-    query = "UPDATE listings SET is_active = 0 WHERE id = ?"
-    params = [listing_id]
-
-    if user_id:
-        query += " AND user_id = ?"
-        params.append(user_id)
-
-    with closing(sqlite3.connect(database=db_path)) as conn:
-        with conn:
-            conn.execute(query, params)
-
-
 def get_user_listings(db_path, user_id):
     with closing(sqlite3.connect(database=db_path)) as conn:
         conn.row_factory = sqlite3.Row
@@ -124,9 +111,9 @@ def get_user_listings(db_path, user_id):
                 SELECT * 
                 FROM listings
                 WHERE user_id = ?
-                AND is_active = 1
+                AND status = ?
                 """,
-                (user_id,),
+                (user_id, ListingStatus.OPEN),
             )
             rows = cursor.fetchall()
     return rows
@@ -147,14 +134,14 @@ def get_matching_wants(
                 SELECT * 
                 FROM listings
                 WHERE listing_type = ?
-                AND user_id != ?
-                AND is_active = 1
+                AND status IN (?, ?)
                 AND sport = ?
                 AND (game_datetime IS NULL OR game_datetime = ?)
                 """,
                 (
                     ListingType.WANT,
-                    user_id,
+                    ListingStatus.OPEN,
+                    ListingStatus.MATCHED,
                     sport,
                     game_datetime_str,
                 ),
@@ -165,21 +152,19 @@ def get_matching_wants(
 
 def get_matching_haves(
     db_path,
-    user_id,
     sport,
     game_datetime,
 ):
 
     with closing(sqlite3.connect(database=db_path)) as conn:
         query = """
-                SELECT * 
-                FROM listings
-                WHERE listing_type = ?
-                AND user_id != ?
-                AND is_active = 1
-                AND sport = ?
-                """
-        params = [ListingType.HAVE, user_id, sport]
+        SELECT * 
+        FROM listings
+        WHERE listing_type = ?
+        AND status IN (?, ?)
+        AND sport = ?
+        """
+        params = [ListingType.HAVE, ListingStatus.OPEN, ListingStatus.MATCHED, sport]
 
         if game_datetime:
             query += " AND game_datetime = ?"
@@ -188,6 +173,8 @@ def get_matching_haves(
         conn.row_factory = sqlite3.Row
         with conn:
             cursor = conn.cursor()
+            print(f"query: {query}")
+            print(f"params: {params}")
             cursor.execute(query, params)
             rows = cursor.fetchall()
     return rows
@@ -198,11 +185,47 @@ def expire_old_listings(db_path):
         with conn:
             conn.execute(
                 """
-                UPDATE listings SET is_active = 0 WHERE is_active = 1 AND (
-                    (listing_type = 'have' AND game_datetime < ?)
+                UPDATE listings SET status = ? WHERE status = ? AND (
+                    (listing_type = ? AND game_datetime < ?)
                     OR
-                    (listing_type = 'want' AND posted_at < ?)
+                    (listing_type = ? AND posted_at < ?)
                 )
                 """,
-                (datetime.now(), (datetime.now() - timedelta(days=182)).isoformat()),
+                (
+                    ListingStatus.CLOSED,
+                    ListingStatus.OPEN,
+                    ListingType.HAVE,
+                    datetime.now(),
+                    ListingType.WANT,
+                    (datetime.now() - timedelta(days=182)).isoformat(),
+                ),
             )
+
+
+def set_listing_status(db_path, listing_id, listing_status):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                UPDATE listings SET status = ? 
+                WHERE id = ?
+                """,
+                (listing_status, listing_id),
+            )
+
+
+def get_matched_listings(db_path):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * 
+                FROM listings
+                WHERE status = ?
+                """,
+                (ListingStatus.MATCHED,),
+            )
+            rows = cursor.fetchall()
+    return rows

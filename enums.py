@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 
 class ListingType(StrEnum):
@@ -11,3 +11,9 @@ class Sport(StrEnum):
     MENS_BASKETBALL = "mens_basketball"
     WOMENS_BASKETBALL = "womens_basketball"
     VOLLEYBALL = "volleyball"
+
+
+class ListingStatus(IntEnum):
+    CLOSED = 0
+    OPEN = 1
+    MATCHED = 2

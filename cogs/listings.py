@@ -5,8 +5,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from database import Listing, add_listing, get_user_listings, update_message_id
-from enums import ListingType, Sport
+from database import (
+    Listing,
+    add_listing,
+    get_user_listings,
+    set_listing_status,
+    update_message_id,
+)
+from enums import ListingStatus, ListingType, Sport
 from matching import find_matches
 from utils import build_embed
 from validators import validate_day, validate_hour, validate_month, validate_year
@@ -91,8 +97,21 @@ class ListingsCog(commands.Cog):
         )
         update_message_id(self.db_path, listing_id=listing_id, message_id=message.id)
         await interaction.response.send_message("Listing posted!", ephemeral=True)
+
         matches = find_matches(db_path=self.db_path, listing=listing)
+        if matches:
+            set_listing_status(
+                db_path=self.db_path,
+                listing_id=listing_id,
+                listing_status=ListingStatus.MATCHED,
+            )
+
         for match in matches:
+            set_listing_status(
+                db_path=self.db_path,
+                listing_id=match.listing_id,
+                listing_status=ListingStatus.MATCHED,
+            )
             await channel.send(
                 f"<@{match.matched_poster_user_id}> someone has posted tickets that match your listing! Check listing ID: {listing_id}"
             )
@@ -189,8 +208,21 @@ class ListingsCog(commands.Cog):
         )
         update_message_id(self.db_path, listing_id=listing_id, message_id=message.id)
         await interaction.response.send_message("Listing posted!", ephemeral=True)
+
         matches = find_matches(db_path=self.db_path, listing=listing)
+        if matches:
+            set_listing_status(
+                db_path=self.db_path,
+                listing_id=listing_id,
+                listing_status=ListingStatus.MATCHED,
+            )
+
         for match in matches:
+            set_listing_status(
+                db_path=self.db_path,
+                listing_id=match.listing_id,
+                listing_status=ListingStatus.MATCHED,
+            )
             await channel.send(
                 f"<@{match.matched_poster_user_id}> someone has posted tickets that match your listing! Check listing ID: {listing_id}"
             )

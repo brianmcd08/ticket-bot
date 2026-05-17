@@ -1,7 +1,7 @@
 import discord
 
-from database import deactivate_listing
-from enums import ListingType
+from database import set_listing_status
+from enums import ListingStatus, ListingType
 
 
 class CloseSelect(discord.ui.Select):
@@ -26,7 +26,8 @@ class CloseSelect(discord.ui.Select):
         listing_id = int(listing_id)
         message_id = int(message_id)
 
-        deactivate_listing(self.db_path, listing_id, user_id=interaction.user.id)
+        set_listing_status(self.db_path, listing_id, ListingStatus.CLOSED)
+        # close_listing(self.db_path, listing_id, user_id=interaction.user.id)
 
         try:
             message = await self.channel.fetch_message(message_id)
@@ -44,3 +45,24 @@ class CloseView(discord.ui.View):
     def __init__(self, listings, db_path, channel):
         super().__init__()
         self.add_item(CloseSelect(listings, db_path, channel))
+
+
+class CloseMatchedListingsView(discord.ui.View):
+    def __init__(self, db_path, listing_id):
+        super().__init__()
+        self.db_path = db_path
+        self.listing_id = listing_id
+
+    @discord.ui.button(label="Yes, close it", style=discord.ButtonStyle.green)
+    async def confirm(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        set_listing_status(self.db_path, self.listing_id, ListingStatus.CLOSED)
+        # close_listing(self.db_path, self.listing_id)
+        await interaction.response.send_message("Listing closed!", ephemeral=True)
+
+    @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.grey)
+    async def dismiss(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await interaction.response.send_message("Got it!", ephemeral=True)

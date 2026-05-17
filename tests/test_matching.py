@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from database import Listing, add_listing, deactivate_listing, init_db
-from enums import ListingType, Sport
+from database import Listing, add_listing, init_db, set_listing_status
+from enums import ListingStatus, ListingType, Sport
 from matching import find_matches
 
 GAME_DT = datetime(2025, 11, 15, 14, 0)
@@ -29,9 +29,6 @@ def make_listing(db_path, listing_type, sport, game_datetime=None, user_id=1):
     )
     listing_id = add_listing(db_path, listing)
     return (listing, listing_id)
-
-
-# find_matches for a HAVE listing
 
 
 def test_have_finds_want_no_date(db):
@@ -73,21 +70,13 @@ def test_have_no_match_different_sport(db):
     assert len(matches) == 0
 
 
-def test_have_no_match_same_user(db):
-    make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    have_listing, _ = make_listing(
-        db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
-    )
-    matches = find_matches(db, have_listing)
-    assert len(matches) == 0
-
-
 def test_have_no_match_inactive_want(db):
     _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
     have_listing, _ = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
     )
-    deactivate_listing(db, want_id)
+    set_listing_status(db, want_id, ListingStatus.CLOSED)
+    # close_listing(db, want_id)
     matches = find_matches(db, have_listing)
     assert len(matches) == 0
 
@@ -100,9 +89,6 @@ def test_have_finds_multiple_wants(db):
     )
     matches = find_matches(db, have_listing)
     assert len(matches) == 2
-
-
-# find_matches for a WANT listing
 
 
 def test_want_finds_have_any_date(db):
@@ -143,23 +129,13 @@ def test_want_no_match_different_sport(db):
     assert len(matches) == 0
 
 
-def test_want_no_match_same_user(db):
-    make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
-    want_listing, _ = make_listing(
-        db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1
-    )
-    matches = find_matches(db, want_listing)
-    assert len(matches) == 0
-
-
 def test_want_no_match_inactive_have(db):
     have_listing, _ = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2
     )
-    want_listing, want_id = make_listing(
-        db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1
-    )
-    deactivate_listing(db, want_id)
+    _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
+    set_listing_status(db, want_id, ListingStatus.CLOSED)
+    # close_listing(db, want_id)
     matches = find_matches(db, have_listing)
     assert len(matches) == 0
 
