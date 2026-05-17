@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from config import ListingType, Sport
+from enums import ListingType, Sport
 
 
 @dataclass

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from config import ListingType, Sport
 from database import Listing, get_matching_haves, get_matching_wants
+from enums import ListingType, Sport
 
 
 @dataclass

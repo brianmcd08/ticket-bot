@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 
-from config import ListingType, Sport
 from database import (
     Listing,
     add_listing,
@@ -10,6 +9,7 @@ from database import (
     get_matching_wants,
     init_db,
 )
+from enums import ListingType, Sport
 
 DB_PATH = ":memory:"
 

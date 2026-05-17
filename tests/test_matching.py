@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from config import ListingType, Sport
 from database import Listing, add_listing, deactivate_listing, init_db
+from enums import ListingType, Sport
 from matching import find_matches
 
 GAME_DT = datetime(2025, 11, 15, 14, 0)
