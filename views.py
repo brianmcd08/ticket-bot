@@ -27,7 +27,6 @@ class CloseSelect(discord.ui.Select):
         message_id = int(message_id)
 
         set_listing_status(self.db_path, listing_id, ListingStatus.CLOSED)
-        # close_listing(self.db_path, listing_id, user_id=interaction.user.id)
 
         try:
             message = await self.channel.fetch_message(message_id)
@@ -58,7 +57,6 @@ class CloseMatchedListingsView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         set_listing_status(self.db_path, self.listing_id, ListingStatus.CLOSED)
-        # close_listing(self.db_path, self.listing_id)
         await interaction.response.send_message("Listing closed!", ephemeral=True)
 
     @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.grey)

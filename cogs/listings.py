@@ -112,8 +112,25 @@ class ListingsCog(commands.Cog):
                 listing_id=match.listing_id,
                 listing_status=ListingStatus.MATCHED,
             )
+
+            listing_sport = listing.sport.replace("_", " ").title()
+            match_sport = match.sport.replace("_", " ").title()
+            listing_gamedatetime = (
+                listing.game_datetime.strftime("%B %d, %Y %I:%M %p")
+                if listing.game_datetime
+                else "Any game"
+            )
+            match_gamedatetime = (
+                match.game_datetime.strftime("%B %d, %Y %I:%M %p")
+                if match.game_datetime
+                else "Any game"
+            )
+
             await channel.send(
-                f"<@{match.matched_poster_user_id}> someone has posted tickets that match your listing! Check listing ID: {listing_id}"
+                f"<@{match.matched_poster_user_id}> <@{match.new_poster_user_id}> has posted tickets that match your listing: {listing.listing_type}, {listing_sport}, {listing_gamedatetime}"
+            )
+            await channel.send(
+                f"<@{match.new_poster_user_id}> <@{match.matched_poster_user_id}> has posted tickets that match your listing: {match.listing_type}, {match_sport}, {match_gamedatetime}"
             )
 
     @app_commands.command(name="want", description="Post what tickets you want")
@@ -223,8 +240,24 @@ class ListingsCog(commands.Cog):
                 listing_id=match.listing_id,
                 listing_status=ListingStatus.MATCHED,
             )
+            listing_sport = listing.sport.replace("_", " ").title()
+            match_sport = match.sport.replace("_", " ").title()
+            listing_gamedatetime = (
+                listing.game_datetime.strftime("%B %d, %Y %I:%M %p")
+                if listing.game_datetime
+                else "Any game"
+            )
+            match_gamedatetime = (
+                match.game_datetime.strftime("%B %d, %Y %I:%M %p")
+                if match.game_datetime
+                else "Any game"
+            )
+
             await channel.send(
-                f"<@{match.matched_poster_user_id}> someone has posted tickets that match your listing! Check listing ID: {listing_id}"
+                f"<@{match.matched_poster_user_id}> <@{match.new_poster_user_id}> has posted tickets that match your listing: {listing.listing_type}, {listing_sport}, {listing_gamedatetime}"
+            )
+            await channel.send(
+                f"<@{match.new_poster_user_id}> <@{match.matched_poster_user_id}> has posted tickets that match your listing: {match.listing_type}, {match_sport}, {match_gamedatetime}"
             )
 
     @app_commands.command(

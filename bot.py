@@ -14,7 +14,7 @@ class TicketBot(commands.Bot):
     async def setup_hook(self):
         init_db(settings.db_path)
         await self.add_cog(ListingsCog(self, settings.db_path, settings.channel_id))
-        await self.add_cog(TasksCog(self, settings.db_path))
+        await self.add_cog(TasksCog(self, settings.db_path, settings.channel_id))
         self.tree.copy_global_to(guild=discord.Object(id=settings.guild_id))
         self.synced = await self.tree.sync(guild=discord.Object(id=settings.guild_id))
 
