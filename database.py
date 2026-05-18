@@ -119,44 +119,13 @@ def get_user_listings(db_path, user_id):
     return rows
 
 
-def get_matching_wants(
-    db_path,
-    user_id,
+def get_matches(
+    db,
     sport,
-    game_datetime_str,
+    type,
+    game_datetime,  # pass as isoformat
 ):
-    with closing(sqlite3.connect(database=db_path)) as conn:
-        conn.row_factory = sqlite3.Row
-        with conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT * 
-                FROM listings
-                WHERE listing_type = ?
-                AND status IN (?, ?)
-                AND sport = ?
-                AND (game_datetime IS NULL OR game_datetime = ?)
-                """,
-                (
-                    ListingType.WANT,
-                    ListingStatus.OPEN,
-                    ListingStatus.MATCHED,
-                    sport,
-                    game_datetime_str,
-                ),
-            )
-            rows = cursor.fetchall()
-    return rows
-
-
-def get_matching_haves(
-    db_path,
-    sport,
-    game_datetime,
-):
-
-    with closing(sqlite3.connect(database=db_path)) as conn:
+    with closing(sqlite3.connect(database=db)) as conn:
         query = """
         SELECT * 
         FROM listings
@@ -164,17 +133,22 @@ def get_matching_haves(
         AND status IN (?, ?)
         AND sport = ?
         """
-        params = [ListingType.HAVE, ListingStatus.OPEN, ListingStatus.MATCHED, sport]
-
+        params = [ListingType(type), ListingStatus.OPEN, ListingStatus.MATCHED, sport]
         if game_datetime:
-            query += " AND game_datetime = ?"
-            params.append(game_datetime.isoformat())
+            dt_str = (
+                game_datetime.isoformat()
+                if isinstance(game_datetime, datetime)
+                else game_datetime
+            )
+            if type == ListingType.HAVE:
+                query += " AND game_datetime = ?"
+            elif type == ListingType.WANT:
+                query += " AND (game_datetime IS NULL OR game_datetime = ?)"
+            params.append(dt_str)
 
         conn.row_factory = sqlite3.Row
         with conn:
             cursor = conn.cursor()
-            print(f"query: {query}")
-            print(f"params: {params}")
             cursor.execute(query, params)
             rows = cursor.fetchall()
     return rows
@@ -202,7 +176,7 @@ def expire_old_listings(db_path):
             )
 
 
-def set_listing_status(db_path, listing_id, listing_status):
+def update_listing_status(db_path, listing_id, listing_status):
     with closing(sqlite3.connect(database=db_path)) as conn:
         with conn:
             conn.execute(
@@ -214,7 +188,7 @@ def set_listing_status(db_path, listing_id, listing_status):
             )
 
 
-def get_matched_listings(db_path):
+def find_listings_in_matched_status(db_path):
     with closing(sqlite3.connect(database=db_path)) as conn:
         conn.row_factory = sqlite3.Row
         with conn:

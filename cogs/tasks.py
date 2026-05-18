@@ -2,7 +2,7 @@ from datetime import datetime
 
 from discord.ext import commands, tasks
 
-from database import expire_old_listings, get_matched_listings
+from database import expire_old_listings, find_listings_in_matched_status
 from views import CloseMatchedListingsView
 
 
@@ -25,7 +25,7 @@ class TasksCog(commands.Cog):
 
     @tasks.loop(hours=24.0)
     async def close_matched_listings_task(self):
-        rows = get_matched_listings(self.db_path)
+        rows = find_listings_in_matched_status(self.db_path)
         for row in rows:
             user = await self.bot.fetch_user(row["user_id"])
             listing_type = row["listing_type"].title()

@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from database import Listing, add_listing, init_db, set_listing_status
+from database import Listing, add_listing, init_db, update_listing_status
 from enums import ListingStatus, ListingType, Sport
 from matching import find_matches
 
@@ -75,7 +75,7 @@ def test_have_no_match_inactive_want(db):
     have_listing, _ = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
     )
-    set_listing_status(db, want_id, ListingStatus.CLOSED)
+    update_listing_status(db, want_id, ListingStatus.CLOSED)
     # close_listing(db, want_id)
     matches = find_matches(db, have_listing)
     assert len(matches) == 0
@@ -134,7 +134,7 @@ def test_want_no_match_inactive_have(db):
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2
     )
     _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    set_listing_status(db, want_id, ListingStatus.CLOSED)
+    update_listing_status(db, want_id, ListingStatus.CLOSED)
     # close_listing(db, want_id)
     matches = find_matches(db, have_listing)
     assert len(matches) == 0

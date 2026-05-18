@@ -9,7 +9,7 @@ from database import (
     Listing,
     add_listing,
     get_user_listings,
-    set_listing_status,
+    update_listing_status,
     update_message_id,
 )
 from enums import ListingStatus, ListingType, Sport
@@ -100,14 +100,14 @@ class ListingsCog(commands.Cog):
 
         matches = find_matches(db_path=self.db_path, listing=listing)
         if matches:
-            set_listing_status(
+            update_listing_status(
                 db_path=self.db_path,
                 listing_id=listing_id,
                 listing_status=ListingStatus.MATCHED,
             )
 
         for match in matches:
-            set_listing_status(
+            update_listing_status(
                 db_path=self.db_path,
                 listing_id=match.listing_id,
                 listing_status=ListingStatus.MATCHED,
@@ -228,14 +228,14 @@ class ListingsCog(commands.Cog):
 
         matches = find_matches(db_path=self.db_path, listing=listing)
         if matches:
-            set_listing_status(
+            update_listing_status(
                 db_path=self.db_path,
                 listing_id=listing_id,
                 listing_status=ListingStatus.MATCHED,
             )
 
         for match in matches:
-            set_listing_status(
+            update_listing_status(
                 db_path=self.db_path,
                 listing_id=match.listing_id,
                 listing_status=ListingStatus.MATCHED,

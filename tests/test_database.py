@@ -8,12 +8,13 @@ from database import (
     Listing,
     add_listing,
     expire_old_listings,
-    get_matched_listings,
-    get_matching_haves,
-    get_matching_wants,
+    find_listings_in_matched_status,
+    get_matches,
+    # get_matching_haves,
+    # get_matching_wants,
     get_user_listings,
     init_db,
-    set_listing_status,
+    update_listing_status,
 )
 from enums import ListingStatus, ListingType, Sport
 
@@ -48,8 +49,11 @@ OTHER_DT = datetime(2025, 12, 1, 18, 0)
 def test_want_no_date_matches_have(db):
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 1
 
@@ -57,8 +61,11 @@ def test_want_no_date_matches_have(db):
 def test_want_matching_date_matches_have(db):
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, GAME_DT, user_id=2)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 1
 
@@ -66,8 +73,11 @@ def test_want_matching_date_matches_have(db):
 def test_want_different_date_no_match(db):
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, OTHER_DT, user_id=2)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 0
 
@@ -76,9 +86,12 @@ def test_inactive_want_no_match(db):
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
     _, listing_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
 
-    set_listing_status(db, listing_id, ListingStatus.CLOSED)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 0
 
@@ -86,21 +99,36 @@ def test_inactive_want_no_match(db):
 def test_have_matches_want_no_date(db):
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=None)
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=None,
+    )
     assert len(results) == 1
 
 
 def test_have_matches_want_with_date(db):
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, GAME_DT, user_id=1)
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=GAME_DT)
+    results = get_matches(
+        db,
+        sport=Sport.FOOTBALL,
+        type=ListingType.WANT,
+        game_datetime=GAME_DT.isoformat(),
+    )
     assert len(results) == 1
 
 
 def test_have_different_date_no_match(db):
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, GAME_DT, user_id=1)
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, OTHER_DT, user_id=2)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=GAME_DT)
+    results = get_matches(
+        db,
+        type=ListingType.HAVE,
+        sport=Sport.FOOTBALL,
+        game_datetime=GAME_DT.isoformat(),
+    )
     assert len(results) == 0
 
 
@@ -109,8 +137,10 @@ def test_inactive_have_no_match(db):
     _, listing_id = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2
     )
-    set_listing_status(db, listing_id, ListingStatus.CLOSED)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=None)
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
+    results = get_matches(
+        db, type=ListingType.HAVE, sport=Sport.FOOTBALL, game_datetime=None
+    )
     assert len(results) == 0
 
 
@@ -118,8 +148,8 @@ def test_deactivate_already_inactive_listing(db):
     _, listing_id = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
     )
-    set_listing_status(db, listing_id, ListingStatus.CLOSED)
-    set_listing_status(db, listing_id, ListingStatus.CLOSED)
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
     listings = get_user_listings(db, user_id=1)
     assert len(listings) == 0
 
@@ -129,7 +159,7 @@ def test_deactivated_listing_not_in_user_listings(db):
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
     )
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    set_listing_status(db, listing_id, ListingStatus.CLOSED)
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
     listings = get_user_listings(db, user_id=1)
     assert len(listings) == 1
 
@@ -175,10 +205,13 @@ def test_recent_want_not_expired(db):
 def test_matched_want_still_matches_have(db):
     """A WANT in MATCHED status should still appear as a match for a new HAVE."""
     _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
-    set_listing_status(db, want_id, ListingStatus.MATCHED)
+    update_listing_status(db, want_id, ListingStatus.MATCHED)
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    results = get_matches(
+        db,
+        type=ListingType.WANT,
+        sport=Sport.FOOTBALL,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 1
 
@@ -186,10 +219,13 @@ def test_matched_want_still_matches_have(db):
 def test_closed_want_does_not_match_have(db):
     """A WANT in CLOSED status should not appear as a match."""
     _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
-    set_listing_status(db, want_id, ListingStatus.CLOSED)
+    update_listing_status(db, want_id, ListingStatus.CLOSED)
     make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
-    results = get_matching_wants(
-        db, user_id=1, sport=Sport.FOOTBALL, game_datetime_str=GAME_DT.isoformat()
+    results = get_matches(
+        db,
+        type=ListingType.WANT,
+        sport=Sport.FOOTBALL,
+        game_datetime=GAME_DT.isoformat(),
     )
     assert len(results) == 0
 
@@ -197,18 +233,22 @@ def test_closed_want_does_not_match_have(db):
 def test_matched_have_still_matches_want(db):
     """A HAVE in MATCHED status should still appear as a match for a new WANT."""
     _, have_id = make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2)
-    set_listing_status(db, have_id, ListingStatus.MATCHED)
+    update_listing_status(db, have_id, ListingStatus.MATCHED)
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=None)
+    results = get_matches(
+        db, type=ListingType.HAVE, sport=Sport.FOOTBALL, game_datetime=None
+    )
     assert len(results) == 1
 
 
 def test_closed_have_does_not_match_want(db):
     """A HAVE in CLOSED status should not appear as a match."""
     _, have_id = make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2)
-    set_listing_status(db, have_id, ListingStatus.CLOSED)
+    update_listing_status(db, have_id, ListingStatus.CLOSED)
     make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    results = get_matching_haves(db, sport=Sport.FOOTBALL, game_datetime=None)
+    results = get_matches(
+        db, type=ListingType.HAVE, sport=Sport.FOOTBALL, game_datetime=None
+    )
     assert len(results) == 0
 
 
@@ -217,7 +257,7 @@ def test_set_listing_status_to_matched(db):
     _, listing_id = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
     )
-    set_listing_status(db, listing_id, ListingStatus.MATCHED)
+    update_listing_status(db, listing_id, ListingStatus.MATCHED)
     with closing(sqlite3.connect(db)) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
@@ -231,14 +271,14 @@ def test_get_matched_listings(db):
     _, listing_id = make_listing(
         db, ListingType.HAVE, Sport.VOLLEYBALL, GAME_DT, user_id=1
     )
-    set_listing_status(db, listing_id, ListingStatus.MATCHED)
+    update_listing_status(db, listing_id, ListingStatus.MATCHED)
     _, listing_id = make_listing(
         db, ListingType.WANT, Sport.MENS_BASKETBALL, GAME_DT, user_id=2
     )
-    set_listing_status(db, listing_id, ListingStatus.MATCHED)
+    update_listing_status(db, listing_id, ListingStatus.MATCHED)
     _, listing_id = make_listing(
         db, ListingType.HAVE, Sport.MENS_BASKETBALL, GAME_DT, user_id=2
     )
 
-    listings = get_matched_listings(db)
+    listings = find_listings_in_matched_status(db)
     assert len(listings) == 2

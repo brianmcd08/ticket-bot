@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from database import Listing, get_matching_haves, get_matching_wants
+from database import Listing, get_matches
 from enums import ListingType, Sport
 
 
@@ -21,16 +21,16 @@ class MatchResult:
 def find_matches(db_path, listing: Listing) -> list[MatchResult]:
     rows = []
     if listing.listing_type == ListingType.HAVE:
-        rows = get_matching_wants(
-            db_path=db_path,
-            user_id=listing.user_id,
+        rows = get_matches(
+            db=db_path,
+            type=ListingType.WANT,
             sport=listing.sport,
-            game_datetime_str=listing.game_datetime_to_str(),
+            game_datetime=listing.game_datetime,
         )
     else:  # WANT
-        rows = get_matching_haves(
-            db_path=db_path,
-            #            user_id=listing.user_id,
+        rows = get_matches(
+            db=db_path,
+            type=ListingType.HAVE,
             sport=listing.sport,
             game_datetime=listing.game_datetime,
         )
