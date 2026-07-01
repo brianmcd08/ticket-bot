@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import discord
 
 from database import Listing
@@ -36,4 +38,48 @@ def build_embed(
 
     embed.set_footer(text=f"Listing ID: {listing_id} | Posted by {user.display_name}")
 
+    return embed
+
+
+def format_listing_line(row) -> str:
+    is_have = row["listing_type"] == ListingType.HAVE
+    sport = row["sport"].replace("_", " ").title()
+
+    if row["game_datetime"]:
+        game_datetime = datetime.fromisoformat(row["game_datetime"]).strftime(
+            "%b %d, %Y %I:%M %p"
+        )
+    else:
+        game_datetime = "Any game"
+
+    qty = f" | Qty: {row['quantity']}" if row["quantity"] else ""
+
+    return (
+        f"🎟️ **{'HAVE' if is_have else 'WANT'}** — {sport} | {game_datetime}{qty} "
+        f"| <@{row['user_id']}> (#{row['id']})"
+    )
+
+
+def build_help_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="🎟️ Ticket Exchange Bot — Commands",
+        description="Post tickets you have, find tickets you need, and get pinged automatically when there's a match.",
+        color=discord.Color.gold(),
+    )
+    embed.add_field(name="/have", value="Post tickets you have available.", inline=False)
+    embed.add_field(
+        name="/want", value="Post that you're looking for tickets.", inline=False
+    )
+    embed.add_field(
+        name="/listings",
+        value="See all open have and want listings, optionally filtered by sport.",
+        inline=False,
+    )
+    embed.add_field(name="/mine", value="See your own open listings.", inline=False)
+    embed.add_field(
+        name="/close",
+        value="Close one of your listings once it's been exchanged.",
+        inline=False,
+    )
+    embed.set_footer(text="Run /help again to refresh this pinned message.")
     return embed

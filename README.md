@@ -54,6 +54,29 @@ Running `/close` shows a dropdown of all your active listings. Select the one yo
 
 ---
 
+### `/listings` — See all open listings
+
+Shows every active have and want in the server, grouped by type. Only visible to you.
+
+**Optional:**
+- **Sport** — filter to just one sport
+
+---
+
+### `/mine` — See your own open listings
+
+Shows just the haves and wants you currently have posted. Only visible to you.
+
+---
+
+### `/help` — Post and pin the command list
+
+Posts a summary of all commands to the ticket exchange channel and pins it, unpinning any previous help message first so there's only ever one. Visible to everyone in the channel.
+
+> **Note:** the bot needs the **Manage Messages** permission to pin. If it's missing, `/help` will still post the summary but let you know it couldn't pin it.
+
+---
+
 ## How Matching Works
 
 Every time a listing is posted, the bot automatically searches for matches:

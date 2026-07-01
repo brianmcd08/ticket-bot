@@ -8,13 +8,14 @@ from discord.ext import commands
 from database import (
     Listing,
     add_listing,
+    get_open_listings,
     get_user_listings,
     update_listing_status,
     update_message_id,
 )
 from enums import ListingStatus, ListingType, Sport
 from matching import find_matches
-from utils import build_embed
+from utils import build_embed, build_help_embed, format_listing_line
 from validators import validate_day, validate_hour, validate_month, validate_year
 from views import CloseView
 
@@ -229,6 +230,94 @@ class ListingsCog(commands.Cog):
             await channel.send(
                 f"<@{match.new_poster_user_id}> <@{match.matched_poster_user_id}> has posted tickets that match your listing: {match.listing_type}, {match_sport}, {match_gamedatetime}"
             )
+
+    @app_commands.command(name="listings", description="See all open have and want listings")
+    @app_commands.describe(sport="Filter by sport")
+    @app_commands.choices(
+        sport=[
+            app_commands.Choice(name="Football", value=Sport.FOOTBALL),
+            app_commands.Choice(name="Men's Basketball", value=Sport.MENS_BASKETBALL),
+            app_commands.Choice(name="Volleyball", value=Sport.VOLLEYBALL),
+            app_commands.Choice(
+                name="Women's Basketball", value=Sport.WOMENS_BASKETBALL
+            ),
+        ]
+    )
+    async def listings(
+        self,
+        interaction: discord.Interaction,
+        sport: Optional[app_commands.Choice[str]] = None,
+    ):
+        rows = get_open_listings(self.db_path)
+        if sport:
+            rows = [row for row in rows if row["sport"] == sport.value]
+
+        haves = [row for row in rows if row["listing_type"] == ListingType.HAVE]
+        wants = [row for row in rows if row["listing_type"] == ListingType.WANT]
+
+        if not haves and not wants:
+            await interaction.response.send_message(
+                "No open listings right now.", ephemeral=True
+            )
+            return
+
+        embed = discord.Embed(title="🎟️ Open Ticket Listings", color=discord.Color.gold())
+        if haves:
+            embed.add_field(
+                name=f"Have ({len(haves)})",
+                value="\n".join(format_listing_line(row) for row in haves)[:1024],
+                inline=False,
+            )
+        if wants:
+            embed.add_field(
+                name=f"Want ({len(wants)})",
+                value="\n".join(format_listing_line(row) for row in wants)[:1024],
+                inline=False,
+            )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(
+        name="mine", description="See your own open have and want listings"
+    )
+    async def mine(self, interaction: discord.Interaction):
+        rows = get_user_listings(self.db_path, interaction.user.id)
+        if not rows:
+            await interaction.response.send_message(
+                "You have no active listings.", ephemeral=True
+            )
+            return
+
+        embed = discord.Embed(title="🎟️ Your Open Listings", color=discord.Color.gold())
+        embed.description = "\n".join(format_listing_line(row) for row in rows)[:4096]
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(
+        name="help", description="Post and pin the command list in the ticket channel"
+    )
+    async def help(self, interaction: discord.Interaction):
+        channel = self.bot.get_channel(self.channel_id)
+        embed = build_help_embed()
+
+        pins = await channel.pins()
+        for pinned in pins:
+            if pinned.author.id == self.bot.user.id and pinned.embeds:
+                await pinned.unpin()
+
+        message = await channel.send(embed=embed)
+
+        try:
+            await message.pin()
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "Help posted, but I don't have permission to pin messages here. "
+                "Grant me the Manage Messages permission and run /help again.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.send_message("Help posted and pinned!", ephemeral=True)
 
     @app_commands.command(
         name="close", description="Close listings that you have created"

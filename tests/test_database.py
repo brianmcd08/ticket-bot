@@ -12,6 +12,7 @@ from database import (
     get_matches,
     # get_matching_haves,
     # get_matching_wants,
+    get_open_listings,
     get_user_listings,
     init_db,
     update_listing_status,
@@ -282,3 +283,23 @@ def test_get_matched_listings(db):
 
     listings = find_listings_in_matched_status(db)
     assert len(listings) == 2
+
+
+def test_get_open_listings_excludes_closed(db):
+    make_listing(db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1)
+    _, closed_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=2)
+    update_listing_status(db, closed_id, ListingStatus.CLOSED)
+
+    listings = get_open_listings(db)
+    assert len(listings) == 1
+    assert listings[0]["listing_type"] == ListingType.HAVE
+
+
+def test_get_open_listings_excludes_matched(db):
+    _, matched_id = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
+    )
+    update_listing_status(db, matched_id, ListingStatus.MATCHED)
+
+    listings = get_open_listings(db)
+    assert len(listings) == 0

@@ -119,6 +119,24 @@ def get_user_listings(db_path, user_id):
     return rows
 
 
+def get_open_listings(db_path):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT *
+                FROM listings
+                WHERE status = ?
+                ORDER BY listing_type, sport, posted_at
+                """,
+                (ListingStatus.OPEN,),
+            )
+            rows = cursor.fetchall()
+    return rows
+
+
 def get_matches(
     db,
     sport,
