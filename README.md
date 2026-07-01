@@ -82,3 +82,53 @@ Listings expire automatically — no action needed on your part:
 - You can have multiple active listings at the same time
 - Close your listing once the exchange is done so others know it's taken
 - If you're flexible on the game, skip the date fields in `/want` — you'll match with any available tickets for that sport
+
+---
+
+## Deployment
+
+The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
+
+### First-time setup
+
+1. Clone the repo onto the machine:
+   ```bash
+   git clone <repo-url> ~/ticket-bot
+   cd ~/ticket-bot
+   ```
+2. Install [uv](https://docs.astral.sh/uv/) if it isn't already present:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+3. Create `.env` in the project root (it's gitignored — copy it over separately, e.g. with `scp`). Use `example.env` as a template:
+   ```
+   DISCORD_TOKEN=
+   GUILD_ID=
+   CHANNEL_ID=
+   DB_PATH=tickets.db
+   ```
+4. Install dependencies. This also downloads a matching Python (>=3.12) if the system Python is older:
+   ```bash
+   uv sync
+   ```
+5. Install the service. Edit `deploy/ticket-bot.service` first — set `User` to your username and update `WorkingDirectory`/`ExecStart` to match your clone path:
+   ```bash
+   sudo cp deploy/ticket-bot.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now ticket-bot
+   ```
+
+### Day-to-day
+
+- **View logs:** `journalctl -u ticket-bot -f`
+- **Restart:** `sudo systemctl restart ticket-bot`
+- **Stop:** `sudo systemctl stop ticket-bot`
+- **Deploy a code change:**
+  ```bash
+  git pull
+  uv sync
+  sudo systemctl restart ticket-bot
+  ```
+  If `deploy/ticket-bot.service` itself changed, re-copy it and run `daemon-reload` before restarting.
+
+The service starts on boot (after network connectivity is available) and auto-restarts on crash.
