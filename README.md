@@ -69,7 +69,7 @@ Shows just the haves and wants you currently have posted. Only visible to you.
 
 ---
 
-### `/help` — Post and pin the command list
+### `/help` — Get help on how to use the ticket exchange
 
 Posts a summary of all commands to the ticket exchange channel and pins it, unpinning any previous help message first so there's only ever one. Visible to everyone in the channel.
 
