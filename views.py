@@ -4,7 +4,7 @@ from database import update_listing_status
 from enums import ListingStatus, ListingType
 
 
-class CloseSelect(discord.ui.Select):
+class CloseSelect(discord.ui.Select[discord.ui.View]):
     def __init__(self, listings, db_path, channel):
         self.db_path = db_path
         self.channel = channel
@@ -54,13 +54,13 @@ class CloseMatchedListingsView(discord.ui.View):
 
     @discord.ui.button(label="Yes, close it", style=discord.ButtonStyle.green)
     async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]
     ):
         update_listing_status(self.db_path, self.listing_id, ListingStatus.CLOSED)
         await interaction.response.send_message("Listing closed!", ephemeral=True)
 
     @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.grey)
     async def dismiss(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+        self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]
     ):
         await interaction.response.send_message("Got it!", ephemeral=True)

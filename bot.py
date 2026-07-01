@@ -8,6 +8,8 @@ from database import init_db
 
 
 class TicketBot(commands.Bot):
+    synced: list[discord.app_commands.AppCommand]
+
     def __init__(self):
         super().__init__(command_prefix="!", intents=discord.Intents.default())
 

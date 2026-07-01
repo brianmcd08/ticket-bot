@@ -14,7 +14,7 @@ class TasksCog(commands.Cog):
         self.expire_listings_task.start()
         self.close_matched_listings_task.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         # Cancel the loop when the Cog is unloaded to prevent memory leaks
         self.expire_listings_task.cancel()
         self.close_matched_listings_task.cancel()

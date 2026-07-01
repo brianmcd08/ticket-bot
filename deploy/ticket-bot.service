@@ -1,0 +1,15 @@
+[Unit]
+Description=Ticket Exchange Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pipi
+WorkingDirectory=/home/pipi/ticket-bot
+ExecStart=/home/pipi/ticket-bot/.venv/bin/python bot.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
