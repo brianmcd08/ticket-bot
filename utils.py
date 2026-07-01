@@ -78,7 +78,7 @@ def build_help_embed() -> discord.Embed:
     embed.add_field(name="/mine", value="See your own open listings.", inline=False)
     embed.add_field(
         name="/close",
-        value="Close one of your listings once it's been exchanged.",
+        value="Close one of your listings once it's been exchanged or if you change your mind.",
         inline=False,
     )
     embed.set_footer(text="Run /help again to refresh this pinned message.")

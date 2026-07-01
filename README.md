@@ -48,7 +48,7 @@ Use this when you need tickets to a game. Only sport is required — you can be 
 
 ### `/close` — Close one of your listings
 
-Use this once your tickets have been exchanged or you no longer need the listing.
+Use this once your tickets have been exchanged or if you change your mind.
 
 Running `/close` shows a dropdown of all your active listings. Select the one you want to close and it will be marked as closed.
 
