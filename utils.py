@@ -72,14 +72,24 @@ def build_help_embed() -> discord.Embed:
     )
     embed.add_field(
         name="/listings",
-        value="See all open have and want listings, optionally filtered by sport.",
+        value="See all open have and want listings, optionally filtered by sport. "
+        "Only visible to you, in whatever channel you run it.",
         inline=False,
     )
-    embed.add_field(name="/mine", value="See your own open listings.", inline=False)
+    embed.add_field(
+        name="/mine",
+        value="See your own open listings. Only visible to you, in whatever channel you run it.",
+        inline=False,
+    )
     embed.add_field(
         name="/close",
         value="Close one of your listings once it's been exchanged or if you change your mind.",
         inline=False,
     )
-    embed.set_footer(text="Run /help again to refresh this message.")
+    embed.add_field(
+        name="/help",
+        value="Show this list of commands. Only visible to you, in whatever channel you run it.",
+        inline=False,
+    )
+    embed.set_footer(text="Only visible to you — run /help anytime to see this again.")
     return embed

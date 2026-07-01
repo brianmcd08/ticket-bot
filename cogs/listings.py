@@ -297,12 +297,9 @@ class ListingsCog(commands.Cog):
         name="help", description="Get help on how to use the ticket exchange"
     )
     async def help(self, interaction: discord.Interaction):
-        channel = self.bot.get_channel(self.channel_id)
         embed = build_help_embed()
 
-        await channel.send(embed=embed)
-
-        await interaction.response.send_message("Help posted!", ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(
         name="close", description="Close listings that you have created"

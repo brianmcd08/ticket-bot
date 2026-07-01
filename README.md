@@ -8,7 +8,7 @@ A Discord bot for exchanging university sports tickets with other members of the
 
 The Ticket Exchange Bot lets you post tickets you have available or find tickets you're looking for. When a match is found between someone who has tickets and someone who wants them, the bot pings both of you automatically so you can connect.
 
-All listings are posted to the dedicated ticket exchange channel, but you can run commands from anywhere in the server.
+All listings are posted to the dedicated ticket exchange channel, but you can run commands from anywhere in the server. `/listings`, `/mine`, and `/help` reply privately, visible only to you, in whatever channel you run them.
 
 ---
 
@@ -56,7 +56,7 @@ Running `/close` shows a dropdown of all your active listings. Select the one yo
 
 ### `/listings` — See all open listings
 
-Shows every active have and want in the server, grouped by type. Only visible to you.
+Shows every active have and want in the server, grouped by type. Only visible to you, in whatever channel you run it.
 
 **Optional:**
 - **Sport** — filter to just one sport
@@ -65,13 +65,13 @@ Shows every active have and want in the server, grouped by type. Only visible to
 
 ### `/mine` — See your own open listings
 
-Shows just the haves and wants you currently have posted. Only visible to you.
+Shows just the haves and wants you currently have posted. Only visible to you, in whatever channel you run it.
 
 ---
 
 ### `/help` — Get help on how to use the ticket exchange
 
-Posts a summary of all commands to the ticket exchange channel. Visible to everyone in the channel.
+Shows a summary of all commands. Only visible to you, in whatever channel you run it.
 
 ---
 
