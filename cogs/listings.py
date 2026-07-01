@@ -294,7 +294,7 @@ class ListingsCog(commands.Cog):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(
-        name="help", description="Post and pin the command list in the ticket channel"
+        name="help", description="Get help on how to use the ticket exchange"
     )
     async def help(self, interaction: discord.Interaction):
         channel = self.bot.get_channel(self.channel_id)

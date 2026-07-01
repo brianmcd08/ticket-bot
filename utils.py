@@ -81,5 +81,5 @@ def build_help_embed() -> discord.Embed:
         value="Close one of your listings once it's been exchanged or if you change your mind.",
         inline=False,
     )
-    embed.set_footer(text="Run /help again to refresh this pinned message.")
+    embed.set_footer(text="Run /help again to refresh this message.")
     return embed
