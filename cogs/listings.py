@@ -300,24 +300,9 @@ class ListingsCog(commands.Cog):
         channel = self.bot.get_channel(self.channel_id)
         embed = build_help_embed()
 
-        pins = await channel.pins()
-        for pinned in pins:
-            if pinned.author.id == self.bot.user.id and pinned.embeds:
-                await pinned.unpin()
+        await channel.send(embed=embed)
 
-        message = await channel.send(embed=embed)
-
-        try:
-            await message.pin()
-        except discord.Forbidden:
-            await interaction.response.send_message(
-                "Help posted, but I don't have permission to pin messages here. "
-                "Grant me the Manage Messages permission and run /help again.",
-                ephemeral=True,
-            )
-            return
-
-        await interaction.response.send_message("Help posted and pinned!", ephemeral=True)
+        await interaction.response.send_message("Help posted!", ephemeral=True)
 
     @app_commands.command(
         name="close", description="Close listings that you have created"
