@@ -10,5 +10,14 @@ dependencies = [
     "python-dotenv>=1.2.2",
 ]
 
-[tool.basedpyright]
+# Read by both Pylance (VS Code) and basedpyright (VSCodium); basedpyright falls
+# back to [tool.pyright] when no [tool.basedpyright] exists, and errors out on
+# the whole file if both are present. Keep exactly this one section.
+#
+# venvPath/venv point the checker at the uv-managed venv, so it does not fall
+# back to whatever `python3` is on PATH and flag every third-party import.
+[tool.pyright]
 typeCheckingMode = "basic"
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"

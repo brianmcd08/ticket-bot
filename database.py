@@ -101,6 +101,11 @@ def update_message_id(db_path, listing_id, message_id):
             )
 
 
+# A match is a notification, not a closure: a MATCHED listing is still live and
+# must stay visible in /listings, /mine and /close until its owner closes it.
+ACTIVE_STATUSES = (ListingStatus.OPEN, ListingStatus.MATCHED)
+
+
 def get_user_listings(db_path, user_id):
     with closing(sqlite3.connect(database=db_path)) as conn:
         conn.row_factory = sqlite3.Row
@@ -108,12 +113,13 @@ def get_user_listings(db_path, user_id):
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT * 
+                SELECT *
                 FROM listings
                 WHERE user_id = ?
-                AND status = ?
+                AND status IN (?, ?)
+                ORDER BY listing_type, sport, posted_at
                 """,
-                (user_id, ListingStatus.OPEN),
+                (user_id, *ACTIVE_STATUSES),
             )
             rows = cursor.fetchall()
     return rows
@@ -128,10 +134,10 @@ def get_open_listings(db_path):
                 """
                 SELECT *
                 FROM listings
-                WHERE status = ?
+                WHERE status IN (?, ?)
                 ORDER BY listing_type, sport, posted_at
                 """,
-                (ListingStatus.OPEN,),
+                ACTIVE_STATUSES,
             )
             rows = cursor.fetchall()
     return rows
@@ -142,27 +148,38 @@ def get_matches(
     sport,
     type,
     game_datetime,  # pass as isoformat
+    exclude_user_id=None,
 ):
     with closing(sqlite3.connect(database=db)) as conn:
         query = """
-        SELECT * 
+        SELECT *
         FROM listings
         WHERE listing_type = ?
         AND status IN (?, ?)
         AND sport = ?
         """
-        params = [ListingType(type), ListingStatus.OPEN, ListingStatus.MATCHED, sport]
+        params = [ListingType(type), *ACTIVE_STATUSES, sport]
+        if exclude_user_id is not None:
+            query += " AND user_id != ?"
+            params.append(exclude_user_id)
         if game_datetime:
             dt_str = (
                 game_datetime.isoformat()
                 if isinstance(game_datetime, datetime)
                 else game_datetime
             )
+            # Match on the calendar day, not the exact timestamp. Two people
+            # describing the same game reliably agree on the date and almost
+            # never on the minute (or even AM/PM), so exact equality here meant
+            # real pairs silently never matched.
+            day = dt_str[:10]
             if type == ListingType.HAVE:
-                query += " AND game_datetime = ?"
+                query += " AND substr(game_datetime, 1, 10) = ?"
             elif type == ListingType.WANT:
-                query += " AND (game_datetime IS NULL OR game_datetime = ?)"
-            params.append(dt_str)
+                query += (
+                    " AND (game_datetime IS NULL OR substr(game_datetime, 1, 10) = ?)"
+                )
+            params.append(day)
 
         conn.row_factory = sqlite3.Row
         with conn:
@@ -173,25 +190,52 @@ def get_matches(
 
 
 def expire_old_listings(db_path):
+    now = datetime.now()
     with closing(sqlite3.connect(database=db_path)) as conn:
         with conn:
             conn.execute(
                 """
-                UPDATE listings SET status = ? WHERE status = ? AND (
-                    (listing_type = ? AND game_datetime < ?)
+                UPDATE listings SET status = ? WHERE status IN (?, ?) AND (
+                    (listing_type = ? AND substr(game_datetime, 1, 10) < ?)
                     OR
                     (listing_type = ? AND posted_at < ?)
                 )
                 """,
                 (
                     ListingStatus.CLOSED,
-                    ListingStatus.OPEN,
+                    *ACTIVE_STATUSES,
                     ListingType.HAVE,
-                    datetime.now(),
+                    # Compare day-to-day with a plain string. Passing a datetime
+                    # object relied on sqlite3's implicit adapter, which is
+                    # deprecated in 3.12 and renders "YYYY-MM-DD HH:MM:SS" with a
+                    # space, so it never compared correctly against our stored
+                    # isoformat values with a "T".
+                    now.date().isoformat(),
                     ListingType.WANT,
-                    (datetime.now() - timedelta(days=182)).isoformat(),
+                    (now - timedelta(days=182)).isoformat(),
                 ),
             )
+
+
+def close_all_listings(db_path):
+    """Close every active listing. Returns the rows as they were before closing.
+
+    The caller needs the returned message_ids to mark the channel posts closed,
+    so the select and the update happen in one transaction.
+    """
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM listings WHERE status IN (?, ?)", ACTIVE_STATUSES
+            )
+            rows = cursor.fetchall()
+            cursor.execute(
+                "UPDATE listings SET status = ? WHERE status IN (?, ?)",
+                (ListingStatus.CLOSED, *ACTIVE_STATUSES),
+            )
+    return rows
 
 
 def update_listing_status(db_path, listing_id, listing_status):

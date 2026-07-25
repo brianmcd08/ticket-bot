@@ -21,12 +21,12 @@ Use this when you have tickets you want to give away or sell.
 **Required:**
 - **Sport** — Football, Men's Basketball, Women's Basketball, or Volleyball
 - **Month**, **Day**, **Year** — the date of the game
-- **Hour** — game start time in 24-hour format (e.g. 13 for 1:00 PM)
-- **Minute** — choose from 00, 15, 30, or 45
 - **Quantity** — number of tickets
 
 **Optional:**
-- **Notes** — section, row, asking price, or anything else useful
+- **Notes** — game time, section, row, asking price, or anything else useful
+
+> Listings are identified by the game date. There's no start time field, since matching works on the day; put the tip-off time in **Notes** if it matters.
 
 ---
 
@@ -38,7 +38,7 @@ Use this when you need tickets to a game. Only sport is required — you can be 
 - **Sport** — Football, Men's Basketball, Women's Basketball, or Volleyball
 
 **Optional:**
-- **Month**, **Day**, **Year**, **Hour**, **Minute** — specify a particular game (provide all fields or none)
+- **Month**, **Day**, **Year** — specify a particular game (provide all three or none)
 - **Quantity** — number of tickets you need
 - **Notes** — anything else worth mentioning
 
@@ -75,16 +75,30 @@ Shows a summary of all commands. Only visible to you, in whatever channel you ru
 
 ---
 
+## Admin Commands
+
+### `/clear` — Close every open listing
+
+Restricted to server administrators and hidden from `/help` and from the command picker for everyone else.
+
+Closes all active listings server-wide, for every user, and greys out their channel posts as `❌ CLOSED`. Shows a confirmation prompt with the count first, and the confirmation expires after two minutes if ignored. Rows are closed rather than deleted, so nothing is lost from the database.
+
+Useful for resetting between seasons, or after testing.
+
+---
+
 ## How Matching Works
 
 Every time a listing is posted, the bot automatically searches for matches:
 
-- A `/have` matches any `/want` for the same sport where dates match or the want has no date specified
-- A `/want` matches any `/have` for the same sport where the dates match
+- A `/have` matches any `/want` for the same sport on the same game day, or any `/want` with no date specified
+- A `/want` matches any `/have` for the same sport on the same game day
+
+Matching is on the calendar day. You never match with your own listings.
 
 When a match is found, the bot pings both users in the ticket exchange channel. From there, it's up to you to reach out and arrange the exchange.
 
-Once the exchange is done, run `/close` to remove your listing.
+Matched listings stay open and keep showing up in `/listings` and `/mine`. Once the exchange is actually done, run `/close` to remove your listing.
 
 ---
 
@@ -92,7 +106,7 @@ Once the exchange is done, run `/close` to remove your listing.
 
 Listings expire automatically — no action needed on your part:
 
-- **Have listings** expire when the game date and time has passed
+- **Have listings** expire the day after the game
 - **Want listings** expire after 6 months
 
 ---

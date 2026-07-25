@@ -130,14 +130,42 @@ def test_want_no_match_different_sport(db):
 
 
 def test_want_no_match_inactive_have(db):
-    have_listing, _ = make_listing(
+    """Searching from the WANT side must skip closed HAVEs.
+
+    This previously closed the want and searched from the have, duplicating
+    test_have_no_match_inactive_want and leaving this direction untested.
+    """
+    _, have_id = make_listing(
         db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=2
     )
-    _, want_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1)
-    update_listing_status(db, want_id, ListingStatus.CLOSED)
-    # close_listing(db, want_id)
+    update_listing_status(db, have_id, ListingStatus.CLOSED)
+    want_listing, _ = make_listing(
+        db, ListingType.WANT, Sport.FOOTBALL, None, user_id=1
+    )
+    matches = find_matches(db, want_listing)
+    assert len(matches) == 0
+
+
+def test_does_not_match_own_listing(db):
+    make_listing(db, ListingType.WANT, Sport.FOOTBALL, GAME_DT, user_id=1)
+    have_listing, _ = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
+    )
     matches = find_matches(db, have_listing)
     assert len(matches) == 0
+
+
+def test_matches_same_day_different_start_time(db):
+    """Users rarely agree on the exact minute of a game; the day is enough."""
+    make_listing(
+        db, ListingType.WANT, Sport.FOOTBALL, datetime(2025, 11, 15, 19, 30), user_id=2
+    )
+    have_listing, _ = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, datetime(2025, 11, 15, 7, 0), user_id=1
+    )
+    matches = find_matches(db, have_listing)
+    assert len(matches) == 1
+    assert matches[0].matched_poster_user_id == 2
 
 
 def test_want_finds_multiple_haves(db):

@@ -211,5 +211,6 @@ __marimo__/
 chroma_langchain_db/
 
 tickets.db
+backups/
 __pycache__/
 *.pyc

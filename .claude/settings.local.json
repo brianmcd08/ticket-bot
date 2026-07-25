@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip show *)",
+      "Bash(find / -iname \"*pylance*\" -maxdepth 6)",
+      "Read(//home/brianmcdowell/.vscode-oss/extensions/**)",
+      "Read(//home/brianmcdowell/.config/VSCodium/User/**)",
+      "Bash(codium --list-extensions)",
+      "Read(//home/brianmcdowell/**)",
+      "Bash(~/.vscode-oss/extensions/charliermarsh.ruff-2026.56.0-linux-x64/bundled/libs/bin/ruff check *)",
+      "Bash(uvx basedpyright *)",
+      "Bash(git -C /home/brianmcdowell/programming/ticket-bot log --oneline -20)",
+      "Bash(git -C /home/brianmcdowell/programming/ticket-bot ls-files)",
+      "Bash(grep -E \"\\\\.env$|tickets\\\\.db$\")",
+      "Bash(git -C /home/brianmcdowell/programming/ticket-bot status --short)",
+      "Bash(.venv/bin/python -m pytest -q)",
+      "Bash(grep -i \"\\\\.env$\")",
+      "Bash(grep -iE \"\\\\.env$|token|secret\")"
+    ]
+  }
+}

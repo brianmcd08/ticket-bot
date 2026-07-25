@@ -20,12 +20,15 @@ class MatchResult:
 
 def find_matches(db_path, listing: Listing) -> list[MatchResult]:
     rows = []
+    # Never match someone with their own listing: it pinged the poster about
+    # themselves and flipped their other listing to MATCHED.
     if listing.listing_type == ListingType.HAVE:
         rows = get_matches(
             db=db_path,
             type=ListingType.WANT,
             sport=listing.sport,
             game_datetime=listing.game_datetime,
+            exclude_user_id=listing.user_id,
         )
     else:  # WANT
         rows = get_matches(
@@ -33,6 +36,7 @@ def find_matches(db_path, listing: Listing) -> list[MatchResult]:
             type=ListingType.HAVE,
             sport=listing.sport,
             game_datetime=listing.game_datetime,
+            exclude_user_id=listing.user_id,
         )
     return [
         MatchResult(

@@ -16,19 +16,13 @@ def build_embed(
         color=discord.Color.green() if is_have else discord.Color.blue(),
     )
 
-    if listing.game_datetime:
-        embed.add_field(
-            name="Date",
-            value=listing.game_datetime.strftime("%B %d, %Y"),
-            inline=True,
-        )
-        embed.add_field(
-            name="Time",
-            value=listing.game_datetime.strftime("%I:%M %p"),
-            inline=True,
-        )
-    else:
-        embed.add_field(name="Date", value="Any game", inline=True)
+    embed.add_field(
+        name="Date",
+        value=listing.game_datetime.strftime("%B %d, %Y")
+        if listing.game_datetime
+        else "Any game",
+        inline=True,
+    )
 
     if listing.quantity:
         embed.add_field(name="Tickets", value=str(listing.quantity), inline=True)
@@ -47,7 +41,7 @@ def format_listing_line(row) -> str:
 
     if row["game_datetime"]:
         game_datetime = datetime.fromisoformat(row["game_datetime"]).strftime(
-            "%b %d, %Y %I:%M %p"
+            "%b %d, %Y"
         )
     else:
         game_datetime = "Any game"
@@ -91,5 +85,6 @@ def build_help_embed() -> discord.Embed:
         value="Show this list of commands. Only visible to you, in whatever channel you run it.",
         inline=False,
     )
+    # /clear is intentionally not listed: admin-only maintenance command.
     embed.set_footer(text="Only visible to you — run /help anytime to see this again.")
     return embed
