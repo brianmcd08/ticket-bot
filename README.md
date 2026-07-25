@@ -99,12 +99,24 @@ Reopening restores the original post in place (un-greying it), then adds a short
 
 ---
 
+### `/refresh` — Re-render active listing posts
+
+Restricted to server administrators and hidden from `/help`.
+
+A listing's card is built when it is posted, so a change to the card layout only affects listings posted afterwards. `/refresh` re-renders every active listing's post from its database row, bringing already-posted cards up to the current layout.
+
+It edits posts in place and nothing else: no announcement, no pings, no reposting of cards whose message was deleted, and matching is **not** re-run. The reply is a private count of what was updated and what was skipped, and why.
+
+---
+
 ## How Matching Works
 
 Every time a listing is posted, the bot automatically searches for matches:
 
 - A `/have` matches any `/want` for the same sport on the same game day, or any `/want` with no date specified
 - A `/want` matches any `/have` for the same sport on the same game day
+
+Every posted card ends with the command that matches it, so a reader knows the next step without having read `/help`: a **have** card says to post `/want` for that game, a **want** card says to post `/have`. Replying in the channel or DMing the poster does not create a match. Closing a listing removes that prompt from its card, since a closed listing can no longer match.
 
 Matching is on the calendar day. You never match with your own listings.
 

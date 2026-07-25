@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -48,6 +49,40 @@ DESCRIBE_KWARGS = {
     "day": "The day of the game (between 1 and 31)",
     "year": "The year of the game",
 }
+
+
+@dataclass
+class RefreshResult:
+    """Tally for /refresh, which reports counts rather than pinging anyone."""
+
+    updated: int = 0
+    missing_post: int = 0
+    no_channel: int = 0
+    unknown_poster: int = 0
+
+    def summary(self) -> str:
+        if not any(
+            (self.updated, self.missing_post, self.no_channel, self.unknown_poster)
+        ):
+            return "There are no active listings to refresh."
+
+        lines = [f"Re-rendered {self.updated} listing post(s)."]
+        if self.missing_post:
+            lines.append(
+                f"{self.missing_post} listing(s) have no post in the channel "
+                f"any more, so there was nothing to update."
+            )
+        if self.no_channel:
+            lines.append(
+                f"{self.no_channel} listing(s) are for a sport whose channel I "
+                f"can't reach. Check the channel config."
+            )
+        if self.unknown_poster:
+            lines.append(
+                f"{self.unknown_poster} listing(s) were left alone because I "
+                f"couldn't look up who posted them."
+            )
+        return "\n".join(lines)
 
 
 class ListingsCog(commands.Cog):
@@ -477,6 +512,78 @@ class ListingsCog(commands.Cog):
             await self._notify_matches(listing, listing_id, channel)
         except discord.HTTPException:
             log.exception("Failed to notify matches for reopened %s", listing_id)
+
+    async def _resolve_poster(self, user_id: int, cache: dict[int, discord.abc.User]):
+        """The poster, for the card's footer. None if they can't be looked up.
+
+        Cached across the batch so one person's five listings cost one fetch,
+        and skipped rather than substituted: a wrong name in the footer is worse
+        than leaving a card alone.
+        """
+        if user_id in cache:
+            return cache[user_id]
+        user = self.bot.get_user(user_id)
+        if user is None:
+            try:
+                user = await self.bot.fetch_user(user_id)
+            except discord.HTTPException:
+                log.warning("Could not resolve poster %s during /refresh", user_id)
+                return None
+        cache[user_id] = user
+        return user
+
+    # Deliberately absent from /help, like /clear and /reopen.
+    @app_commands.command(
+        name="refresh",
+        description="Admin only: re-render active listing posts with the current card layout",
+    )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
+    async def refresh(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        if not await self._require_admin(interaction):
+            return
+
+        rows = get_open_listings(self.db_path)
+        result = RefreshResult()
+        poster_cache: dict[int, discord.abc.User] = {}
+
+        for row in rows:
+            # 0 means the channel post failed at creation, so there is nothing
+            # to re-render.
+            if not row["message_id"]:
+                result.missing_post += 1
+                continue
+
+            listing = Listing.from_row(row)
+            channel = self.channel_for(listing.sport)
+            if channel is None:
+                result.no_channel += 1
+                continue
+
+            poster = await self._resolve_poster(listing.user_id, poster_cache)
+            if poster is None:
+                result.unknown_poster += 1
+                continue
+
+            embed = build_embed(listing, row["id"], poster)
+            # Edit in place only. Unlike /reopen this never reposts a missing
+            # card and never announces anything: the point is to change the
+            # rendering without pinging anyone.
+            if await replace_message_embed(channel, row["message_id"], embed) is None:
+                result.missing_post += 1
+            else:
+                result.updated += 1
+
+        log.info(
+            "/refresh updated %s of %s active listing(s)", result.updated, len(rows)
+        )
+        try:
+            await interaction.followup.send(result.summary(), ephemeral=True)
+        except discord.HTTPException:
+            # A long batch can outlive the 15 minute followup window; the work
+            # itself already happened.
+            log.exception("Could not report /refresh results")
 
     @app_commands.command(
         name="clear", description="Admin only: close every open listing"

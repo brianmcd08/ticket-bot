@@ -6,6 +6,43 @@ from database import Listing
 from enums import ListingType
 
 
+# Field names for the "here's how to match this" hint. Named constants because
+# views.mark_message_closed strips these fields off a closed card: the call to
+# action is wrong once the listing can no longer match anything.
+HAVE_HINT_NAME = "🙋 Want these?"
+WANT_HINT_NAME = "🙌 Have these?"
+MATCH_HINT_NAMES = (HAVE_HINT_NAME, WANT_HINT_NAME)
+
+
+def _match_hint(listing: Listing) -> tuple[str, str]:
+    """The (name, value) of the hint field telling a reader how to match a card.
+
+    Matching happens between listings, so someone who replies in the channel or
+    DMs the poster never gets a match ping. The card has to say which command to
+    run, otherwise only people who have read /help know.
+    """
+    sport = listing.sport.replace("_", " ").title()
+    game_day = (
+        listing.game_datetime.strftime("%B %d, %Y") if listing.game_datetime else None
+    )
+
+    if listing.listing_type == ListingType.HAVE:
+        target = f"for **{game_day}**" if game_day else f"for {sport}"
+        return (
+            HAVE_HINT_NAME,
+            f"Post `/want` in this channel {target} and the bot pings you both "
+            f"here. Leave the date off `/want` to match any {sport} game.",
+        )
+
+    # A want with no date matches every open have for the sport, so say so
+    # rather than naming a game day it does not care about.
+    target = f"for **{game_day}**" if game_day else f"for any {sport} game"
+    return (
+        WANT_HINT_NAME,
+        f"Post `/have` in this channel {target} and the bot pings you both here.",
+    )
+
+
 def build_embed(
     listing: Listing, listing_id: int, user: discord.abc.User
 ) -> discord.Embed:
@@ -29,6 +66,9 @@ def build_embed(
 
     if listing.notes:
         embed.add_field(name="Notes", value=listing.notes, inline=False)
+
+    hint_name, hint_value = _match_hint(listing)
+    embed.add_field(name=hint_name, value=hint_value, inline=False)
 
     embed.set_footer(text=f"Listing ID: {listing_id} | Posted by {user.display_name}")
 

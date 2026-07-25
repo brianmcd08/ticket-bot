@@ -6,6 +6,7 @@ import discord
 
 from database import close_all_listings, update_listing_status
 from enums import ListingStatus, ListingType
+from utils import MATCH_HINT_NAMES
 
 log = logging.getLogger("ticketbot")
 
@@ -40,6 +41,11 @@ async def mark_message_closed(channel, message_id, listing_id) -> bool:
         # that shape ever changes.
         suffix = title.split("—", 1)[1].strip() if "—" in title else title
         embed.title = f"❌ CLOSED — {suffix}"
+        # A closed listing can no longer match, so drop the "post /want to match
+        # this" hint. Walk backwards: remove_field shifts every later index.
+        for index in reversed(range(len(embed.fields))):
+            if embed.fields[index].name in MATCH_HINT_NAMES:
+                embed.remove_field(index)
         await message.edit(embed=embed)
         return True
     except discord.NotFound:

@@ -6,7 +6,14 @@ import pytest
 
 from database import Listing
 from enums import ListingType, Sport
-from utils import build_embed, build_help_embed, format_listing_line
+from utils import (
+    HAVE_HINT_NAME,
+    MATCH_HINT_NAMES,
+    WANT_HINT_NAME,
+    build_embed,
+    build_help_embed,
+    format_listing_line,
+)
 
 GAME_DT = datetime(2026, 11, 15, 19, 0)
 
@@ -97,6 +104,50 @@ def test_notes_field_omitted_when_absent():
     assert "Notes" not in field_names(embed_for(make_listing()))
     embed = embed_for(make_listing(notes="Section 12, $40"))
     assert field_value(embed, "Notes") == "Section 12, $40"
+
+
+def test_have_card_tells_readers_to_post_a_want():
+    embed = embed_for(make_listing())
+    hint = field_value(embed, HAVE_HINT_NAME)
+    assert "/want" in hint
+    assert "November 15, 2026" in hint
+    # The opposite command would send people to post a duplicate have.
+    assert "/have" not in hint
+
+
+def test_want_card_tells_readers_to_post_a_have():
+    embed = embed_for(make_listing(listing_type=ListingType.WANT))
+    hint = field_value(embed, WANT_HINT_NAME)
+    assert "/have" in hint
+    assert "November 15, 2026" in hint
+    assert "/want" not in hint
+
+
+def test_undated_want_card_says_any_game_for_the_sport():
+    """A dateless want matches every open have for its sport, so don't name a day."""
+    embed = embed_for(
+        make_listing(listing_type=ListingType.WANT, game_datetime=None)
+    )
+    hint = field_value(embed, WANT_HINT_NAME)
+    assert "any Football game" in hint
+    assert "2026" not in hint
+
+
+def test_have_card_mentions_the_dateless_want_shortcut():
+    hint = field_value(embed_for(make_listing()), HAVE_HINT_NAME)
+    assert "Leave the date off" in hint
+
+
+def test_match_hint_is_the_last_field():
+    """It's a call to action; it reads wrong above the listing's own details."""
+    embed = embed_for(make_listing(notes="Section 12, $40"))
+    assert field_names(embed)[-1] == HAVE_HINT_NAME
+
+
+def test_each_card_carries_exactly_one_hint():
+    for listing_type in (ListingType.HAVE, ListingType.WANT):
+        names = field_names(embed_for(make_listing(listing_type=listing_type)))
+        assert len([n for n in names if n in MATCH_HINT_NAMES]) == 1
 
 
 def test_footer_carries_listing_id_and_poster():
@@ -196,7 +247,7 @@ def test_help_fields_are_within_discord_limits():
     assert len(embed) <= 6000
 
 
-@pytest.mark.parametrize("admin_command", ["/clear", "/reopen"])
+@pytest.mark.parametrize("admin_command", ["/clear", "/reopen", "/refresh"])
 def test_help_does_not_expose_admin_commands(admin_command):
     embed = build_help_embed()
     rendered = " ".join(
