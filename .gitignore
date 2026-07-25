@@ -212,5 +212,8 @@ chroma_langchain_db/
 
 tickets.db
 backups/
+# .env alone does not cover .env.bak, .env.local etc, which carry the token too
+.env.*
+!example.env
 __pycache__/
 *.pyc

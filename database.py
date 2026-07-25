@@ -32,6 +32,21 @@ class Listing:
     def posted_at_to_datetime(self) -> datetime:
         return datetime.fromisoformat(self.posted_at)
 
+    @classmethod
+    def from_row(cls, row) -> "Listing":
+        """Rebuild a Listing from a database row, e.g. to re-render its embed."""
+        return cls(
+            user_id=row["user_id"],
+            listing_type=ListingType(row["listing_type"]),
+            sport=Sport(row["sport"]),
+            game_datetime=cls.game_datetime_from_str(row["game_datetime"]),
+            quantity=row["quantity"],
+            notes=row["notes"],
+            posted_at=row["posted_at"],
+            status=ListingStatus(row["status"]),
+            message_id=row["message_id"],
+        )
+
 
 def init_db(db_path):
     with closing(sqlite3.connect(database=db_path)) as conn:
@@ -123,6 +138,16 @@ def get_user_listings(db_path, user_id):
             )
             rows = cursor.fetchall()
     return rows
+
+
+def get_listing(db_path, listing_id):
+    """One listing by id, whatever its status, or None."""
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM listings WHERE id = ?", (listing_id,))
+            return cursor.fetchone()
 
 
 def get_open_listings(db_path):

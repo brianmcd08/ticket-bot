@@ -163,23 +163,47 @@ def test_line_humanizes_sport_name():
 
 
 def test_help_lists_the_public_commands():
-    assert field_names(build_help_embed()) == [
-        "/have",
-        "/want",
-        "/listings",
-        "/mine",
-        "/close",
-        "/help",
-    ]
+    """Command fields sit among explanatory sections, so check order not equality."""
+    commands = [n for n in field_names(build_help_embed()) if n.startswith("/")]
+    assert commands == ["/have", "/want", "/listings", "/mine", "/close", "/help"]
 
 
-def test_help_does_not_expose_the_admin_clear_command():
+def test_help_explains_where_listings_are_posted():
+    embed = build_help_embed()
+    rendered = " ".join(f"{f.name} {f.value}" for f in embed.fields)
+    assert "channel for its sport" in rendered
+    assert "basketball" in rendered.lower()
+
+
+def test_help_explains_the_channel_shortcut():
+    rendered = " ".join(f.value or "" for f in build_help_embed().fields)
+    assert "blank" in rendered and "sport" in rendered
+
+
+def test_help_explains_day_level_matching():
+    """People need to know start times aren't compared, since there's no time field."""
+    rendered = " ".join(f.value or "" for f in build_help_embed().fields)
+    assert "same game day" in rendered
+    assert "Start times aren't compared" in rendered
+
+
+def test_help_fields_are_within_discord_limits():
+    embed = build_help_embed()
+    assert len(embed.fields) <= 25
+    for f in embed.fields:
+        assert len(f.name or "") <= 256
+        assert len(f.value or "") <= 1024
+    assert len(embed) <= 6000
+
+
+@pytest.mark.parametrize("admin_command", ["/clear", "/reopen"])
+def test_help_does_not_expose_admin_commands(admin_command):
     embed = build_help_embed()
     rendered = " ".join(
         [title_of(embed), embed.description or "", footer_of(embed)]
         + [f"{f.name} {f.value}" for f in embed.fields]
     )
-    assert "/clear" not in rendered
+    assert admin_command not in rendered
 
 
 @pytest.mark.parametrize("command", ["/have", "/want", "/close"])

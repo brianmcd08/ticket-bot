@@ -11,6 +11,7 @@ class Sport(StrEnum):
     MENS_BASKETBALL = "mens_basketball"
     WOMENS_BASKETBALL = "womens_basketball"
     VOLLEYBALL = "volleyball"
+    BASEBALL = "baseball"
 
 
 class ListingStatus(IntEnum):

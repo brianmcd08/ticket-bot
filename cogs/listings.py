@@ -9,6 +9,7 @@ from discord.ext import commands
 from database import (
     Listing,
     add_listing,
+    get_listing,
     get_open_listings,
     get_user_listings,
     update_listing_status,
@@ -23,7 +24,7 @@ from validators import (
     validate_month,
     validate_year,
 )
-from views import CloseView, ConfirmClearView
+from views import CloseView, ConfirmClearView, replace_message_embed
 
 log = logging.getLogger("ticketbot")
 
@@ -32,6 +33,7 @@ SPORT_CHOICES = [
     app_commands.Choice(name="Men's Basketball", value=Sport.MENS_BASKETBALL),
     app_commands.Choice(name="Volleyball", value=Sport.VOLLEYBALL),
     app_commands.Choice(name="Women's Basketball", value=Sport.WOMENS_BASKETBALL),
+    app_commands.Choice(name="Baseball", value=Sport.BASEBALL),
 ]
 
 # Listings are identified by game day only. Start time is not collected: matching
@@ -39,7 +41,7 @@ SPORT_CHOICES = [
 # fields for the poster to get wrong. Anyone who needs the tip-off time puts it
 # in Notes.
 DESCRIBE_KWARGS = {
-    "sport": "The sport",
+    "sport": "The sport (optional in a sport's channel)",
     "quantity": "Number of tickets",
     "notes": "Any additional info, e.g. game time, section, row, price",
     "month": "The month of the game (between 1 and 12)",
@@ -49,10 +51,39 @@ DESCRIBE_KWARGS = {
 
 
 class ListingsCog(commands.Cog):
-    def __init__(self, bot, db_path, channel_id):
+    def __init__(self, bot, db_path, channel_id, sport_channels):
         self.bot = bot
         self.db_path = db_path
         self.channel_id = channel_id
+        self.sport_channels = sport_channels
+
+    def channel_for(self, sport):
+        """The channel a listing for this sport lives in."""
+        return self.sport_channels.resolve(self.bot, sport)
+
+    def sports_in_channel(self, interaction: discord.Interaction) -> list[Sport]:
+        """Sports implied by where the command was run. Empty means no filter."""
+        return self.sport_channels.sports_for_channel(interaction.channel_id)
+
+    def resolve_sport(self, interaction: discord.Interaction, sport):
+        """Sport from the explicit option, else inferred from the channel.
+
+        Returns (sport, error_message); exactly one is None. An explicit choice
+        always wins, so a football listing can still be posted from anywhere.
+        """
+        if sport is not None:
+            return Sport(sport.value), None
+
+        candidates = self.sports_in_channel(interaction)
+        if len(candidates) == 1:
+            return candidates[0], None
+        if len(candidates) > 1:
+            names = " or ".join(_sport_label(s) for s in candidates)
+            return None, (
+                f"This channel covers {names}, so I can't tell which you mean. "
+                f"Please pick the sport."
+            )
+        return None, "Please pick the sport, or run this in a sport's channel."
 
     async def _post_listing(
         self,
@@ -64,11 +95,15 @@ class ListingsCog(commands.Cog):
         The interaction is already deferred by the caller, so every reply here
         goes through followup and none of this work races the 3 second deadline.
         """
-        channel = self.bot.get_channel(self.channel_id)
+        channel = self.channel_for(listing.sport)
         if channel is None:
-            log.error("Ticket channel %s not found or not visible", self.channel_id)
+            log.error(
+                "Channel %s for sport %s not found or not visible",
+                self.sport_channels.channel_id_for(listing.sport),
+                listing.sport,
+            )
             await interaction.followup.send(
-                "I can't reach the ticket exchange channel right now. "
+                "I can't reach the channel for that sport right now. "
                 "Please let an admin know.",
                 ephemeral=True,
             )
@@ -106,14 +141,21 @@ class ListingsCog(commands.Cog):
     async def have(
         self,
         interaction: discord.Interaction,
-        sport: app_commands.Choice[str],
         quantity: int,
         month: int,
         day: int,
         year: int,
+        sport: Optional[app_commands.Choice[str]] = None,
         notes: Optional[str] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+
+        resolved_sport, sport_error = self.resolve_sport(interaction, sport)
+        if resolved_sport is None:
+            await interaction.followup.send(
+                sport_error or "Please pick the sport.", ephemeral=True
+            )
+            return
 
         errors = [
             validate_month(month),
@@ -133,7 +175,7 @@ class ListingsCog(commands.Cog):
         listing = Listing(
             user_id=interaction.user.id,
             listing_type=ListingType.HAVE,
-            sport=Sport(sport.value),
+            sport=resolved_sport,
             game_datetime=datetime(year, month, day),
             quantity=quantity,
             notes=notes,
@@ -147,7 +189,7 @@ class ListingsCog(commands.Cog):
     async def want(
         self,
         interaction: discord.Interaction,
-        sport: app_commands.Choice[str],
+        sport: Optional[app_commands.Choice[str]] = None,
         quantity: Optional[int] = None,
         month: Optional[int] = None,
         day: Optional[int] = None,
@@ -155,6 +197,13 @@ class ListingsCog(commands.Cog):
         notes: Optional[str] = None,
     ):
         await interaction.response.defer(ephemeral=True)
+
+        resolved_sport, sport_error = self.resolve_sport(interaction, sport)
+        if resolved_sport is None:
+            await interaction.followup.send(
+                sport_error or "Please pick the sport.", ephemeral=True
+            )
+            return
 
         errors = [
             validate_month(month) if month is not None else None,
@@ -190,7 +239,7 @@ class ListingsCog(commands.Cog):
         listing = Listing(
             user_id=interaction.user.id,
             listing_type=ListingType.WANT,
-            sport=Sport(sport.value),
+            sport=resolved_sport,
             game_datetime=game_datetime,
             quantity=quantity,
             notes=notes,
@@ -247,21 +296,35 @@ class ListingsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        rows = get_open_listings(self.db_path)
+        # An explicit sport wins; otherwise the channel narrows it. The
+        # basketball channel covers two sports, so this is a set, and an empty
+        # set means show everything.
         if sport:
-            rows = [row for row in rows if row["sport"] == sport.value]
+            wanted = {sport.value}
+            scope = _sport_label(sport.value)
+        else:
+            candidates = self.sports_in_channel(interaction)
+            wanted = {s.value for s in candidates}
+            scope = " & ".join(_sport_label(s) for s in candidates)
+
+        rows = get_open_listings(self.db_path)
+        if wanted:
+            rows = [row for row in rows if row["sport"] in wanted]
 
         haves = [row for row in rows if row["listing_type"] == ListingType.HAVE]
         wants = [row for row in rows if row["listing_type"] == ListingType.WANT]
 
         if not haves and not wants:
             await interaction.followup.send(
-                "No open listings right now.", ephemeral=True
+                f"No open {scope} listings right now." if scope
+                else "No open listings right now.",
+                ephemeral=True,
             )
             return
 
         embed = discord.Embed(
-            title="🎟️ Open Ticket Listings", color=discord.Color.gold()
+            title=f"🎟️ Open {scope} Listings" if scope else "🎟️ Open Ticket Listings",
+            color=discord.Color.gold(),
         )
         if haves:
             embed.add_field(
@@ -319,14 +382,102 @@ class ListingsCog(commands.Cog):
             )
             return
 
-        channel = self.bot.get_channel(self.channel_id)
-        view = CloseView(listings, self.db_path, channel)
+        view = CloseView(listings, self.db_path, self.channel_for)
         view.message = await interaction.followup.send(
             "Select a listing to close:", view=view, ephemeral=True, wait=True
         )
 
+    async def _require_admin(self, interaction: discord.Interaction) -> bool:
+        """default_permissions only sets the server default, which an admin can
+        override in the Integrations panel, so re-check at call time."""
+        member = interaction.user
+        if (
+            not isinstance(member, discord.Member)
+            or not member.guild_permissions.administrator
+        ):
+            log.warning(
+                "Non-admin %s attempted /%s",
+                interaction.user.id,
+                interaction.command.name if interaction.command else "?",
+            )
+            await interaction.followup.send(
+                "Only server administrators can use this command.", ephemeral=True
+            )
+            return False
+        return True
+
     # Deliberately absent from /help: this is an admin maintenance command, not
     # something the members of the server need to see.
+    @app_commands.command(
+        name="reopen",
+        description="Admin only: put a closed listing back, e.g. after /clear",
+    )
+    @app_commands.describe(
+        listing_id="The listing's ID, shown as 'Listing ID: N' on its post"
+    )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
+    async def reopen(self, interaction: discord.Interaction, listing_id: int):
+        await interaction.response.defer(ephemeral=True)
+        if not await self._require_admin(interaction):
+            return
+
+        row = get_listing(self.db_path, listing_id)
+        if row is None:
+            await interaction.followup.send(
+                f"No listing with ID {listing_id}.", ephemeral=True
+            )
+            return
+        if row["status"] != ListingStatus.CLOSED:
+            await interaction.followup.send(
+                f"Listing {listing_id} is already active.", ephemeral=True
+            )
+            return
+
+        listing = Listing.from_row(row)
+        channel = self.channel_for(listing.sport)
+        if channel is None:
+            await interaction.followup.send(
+                "I can't reach the channel for that sport right now.", ephemeral=True
+            )
+            return
+
+        update_listing_status(self.db_path, listing_id, ListingStatus.OPEN)
+
+        # Re-render from the row rather than un-picking the "CLOSED" title, so
+        # the restored post is identical to the original.
+        try:
+            poster = await self.bot.fetch_user(listing.user_id)
+        except discord.HTTPException:
+            poster = interaction.user
+        embed = build_embed(listing, listing_id, poster)
+
+        message = await replace_message_embed(channel, row["message_id"], embed)
+        if message is None:
+            # Original post is gone; post a fresh one and repoint the row.
+            message = await channel.send(embed=embed)
+            update_message_id(
+                self.db_path, listing_id=listing_id, message_id=message.id
+            )
+
+        await interaction.followup.send(
+            f"Listing {listing_id} reopened.", ephemeral=True
+        )
+
+        # A pointer, because the restored post may be far up the channel.
+        try:
+            await channel.send(
+                f"🔄 <@{listing.user_id}> your listing (#{listing_id}) has been "
+                f"reopened by an admin. {message.jump_url}"
+            )
+        except discord.HTTPException:
+            log.exception("Could not announce reopen of listing %s", listing_id)
+
+        try:
+            await self._notify_matches(listing, listing_id, channel)
+        except discord.HTTPException:
+            log.exception("Failed to notify matches for reopened %s", listing_id)
+
     @app_commands.command(
         name="clear", description="Admin only: close every open listing"
     )
@@ -334,18 +485,7 @@ class ListingsCog(commands.Cog):
     @app_commands.guild_only()
     async def clear(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-
-        # default_permissions only sets the server default, which an admin can
-        # override in the Integrations panel, so re-check at call time.
-        member = interaction.user
-        if (
-            not isinstance(member, discord.Member)
-            or not member.guild_permissions.administrator
-        ):
-            log.warning("Non-admin %s attempted /clear", interaction.user.id)
-            await interaction.followup.send(
-                "Only server administrators can use this command.", ephemeral=True
-            )
+        if not await self._require_admin(interaction):
             return
 
         rows = get_open_listings(self.db_path)
@@ -355,8 +495,10 @@ class ListingsCog(commands.Cog):
             )
             return
 
-        channel = self.bot.get_channel(self.channel_id)
-        view = ConfirmClearView(self.db_path, channel, len(rows))
+        announce_channel = self.bot.get_channel(self.channel_id)
+        view = ConfirmClearView(
+            self.db_path, self.channel_for, announce_channel, len(rows)
+        )
         view.message = await interaction.followup.send(
             f"This will close **all {len(rows)} active listing(s)** for everyone "
             f"in the server and mark their channel posts closed. Continue?",
@@ -364,6 +506,10 @@ class ListingsCog(commands.Cog):
             ephemeral=True,
             wait=True,
         )
+
+
+def _sport_label(sport) -> str:
+    return str(sport).replace("_", " ").title()
 
 
 def _format_game_datetime(game_datetime: Optional[datetime]) -> str:
@@ -378,5 +524,5 @@ def _truncate(text: str, limit: int = 1900) -> str:
     return text[:limit] + "\n…and more."
 
 
-def setup(bot, db_path, channel_id):
-    bot.add_cog(ListingsCog(bot, db_path, channel_id))
+def setup(bot, db_path, channel_id, sport_channels):
+    bot.add_cog(ListingsCog(bot, db_path, channel_id, sport_channels))

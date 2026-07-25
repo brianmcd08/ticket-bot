@@ -11,12 +11,16 @@ log = logging.getLogger("ticketbot")
 
 
 class TasksCog(commands.Cog):
-    def __init__(self, bot, db_path, channel_id):
+    def __init__(self, bot, db_path, channel_id, sport_channels):
         self.bot = bot
         self.db_path = db_path
         self.channel_id = channel_id
+        self.sport_channels = sport_channels
         self.expire_listings_task.start()
         self.close_matched_listings_task.start()
+
+    def channel_for(self, sport):
+        return self.sport_channels.resolve(self.bot, sport)
 
     async def cog_unload(self):
         # Cancel the loop when the Cog is unloaded to prevent memory leaks
@@ -55,7 +59,13 @@ class TasksCog(commands.Cog):
 
                 await user.send(
                     f"A match was previously identified for this listing: {listing_type}, {sport}, {game_datetime}\nWould you like to close your listing?",
-                    view=CloseMatchedListingsView(self.db_path, row["id"]),
+                    view=CloseMatchedListingsView(
+                        self.db_path,
+                        row["id"],
+                        self.channel_for,
+                        row["sport"],
+                        row["message_id"],
+                    ),
                 )
             except discord.Forbidden:
                 # User has DMs from server members turned off. Expected, not an error.
@@ -80,5 +90,5 @@ class TasksCog(commands.Cog):
         await self.bot.wait_until_ready()
 
 
-def setup(bot, db_path, channel_id):
-    bot.add_cog(TasksCog(bot, db_path, channel_id))
+def setup(bot, db_path, channel_id, sport_channels):
+    bot.add_cog(TasksCog(bot, db_path, channel_id, sport_channels))

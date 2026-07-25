@@ -23,8 +23,16 @@ class TicketBot(commands.Bot):
 
     async def setup_hook(self):
         init_db(settings.db_path)
-        await self.add_cog(ListingsCog(self, settings.db_path, settings.channel_id))
-        await self.add_cog(TasksCog(self, settings.db_path, settings.channel_id))
+        await self.add_cog(
+            ListingsCog(
+                self, settings.db_path, settings.channel_id, settings.sport_channels
+            )
+        )
+        await self.add_cog(
+            TasksCog(
+                self, settings.db_path, settings.channel_id, settings.sport_channels
+            )
+        )
         self.tree.on_error = on_app_command_error
         self.tree.copy_global_to(guild=discord.Object(id=settings.guild_id))
         self.synced = await self.tree.sync(guild=discord.Object(id=settings.guild_id))
@@ -34,6 +42,10 @@ class TicketBot(commands.Bot):
         print(
             f"Synced {len(self.synced)} commands: {[cmd.name for cmd in self.synced]}"
         )
+        # Config gaps fall back silently rather than failing startup, so print
+        # the resolved routing to make a missing .env entry visible.
+        print("Sport channel routing:")
+        print(settings.sport_channels.describe())
 
 
 async def on_app_command_error(

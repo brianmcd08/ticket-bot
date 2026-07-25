@@ -10,6 +10,7 @@ from database import (
     close_all_listings,
     expire_old_listings,
     find_listings_in_matched_status,
+    get_listing,
     get_matches,
     # get_matching_haves,
     # get_matching_wants,
@@ -352,6 +353,70 @@ def test_expire_leaves_game_earlier_today(db):
     expire_old_listings(db)
     listings = get_user_listings(db, user_id=1)
     assert len(listings) == 1
+
+
+def test_get_listing_returns_row_whatever_its_status(db):
+    """/reopen must find CLOSED rows, which the other getters filter out."""
+    _, listing_id = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
+    )
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
+
+    row = get_listing(db, listing_id)
+    assert row is not None
+    assert row["id"] == listing_id
+    assert row["status"] == ListingStatus.CLOSED
+
+
+def test_get_listing_unknown_id_returns_none(db):
+    assert get_listing(db, 99999) is None
+
+
+def test_closed_listing_keeps_all_its_data(db):
+    """Closing must preserve enough to rebuild the listing later."""
+    listing, listing_id = make_listing(
+        db, ListingType.WANT, Sport.BASEBALL, GAME_DT, user_id=77
+    )
+    update_message_id(db, listing_id=listing_id, message_id=555)
+    update_listing_status(db, listing_id, ListingStatus.CLOSED)
+
+    row = get_listing(db, listing_id)
+    assert row["user_id"] == 77
+    assert row["sport"] == Sport.BASEBALL
+    assert row["listing_type"] == ListingType.WANT
+    assert row["message_id"] == 555
+    assert row["game_datetime"] == GAME_DT.isoformat()
+
+
+def test_listing_from_row_roundtrips(db):
+    original, listing_id = make_listing(
+        db, ListingType.HAVE, Sport.VOLLEYBALL, GAME_DT, user_id=5
+    )
+    rebuilt = Listing.from_row(get_listing(db, listing_id))
+
+    assert rebuilt.user_id == original.user_id
+    assert rebuilt.listing_type == ListingType.HAVE
+    assert rebuilt.sport == Sport.VOLLEYBALL
+    assert rebuilt.game_datetime == GAME_DT
+    assert rebuilt.quantity == original.quantity
+
+
+def test_listing_from_row_handles_no_game_date(db):
+    _, listing_id = make_listing(db, ListingType.WANT, Sport.FOOTBALL, None, user_id=5)
+    assert Listing.from_row(get_listing(db, listing_id)).game_datetime is None
+
+
+def test_reopening_restores_it_to_the_active_lists(db):
+    _, listing_id = make_listing(
+        db, ListingType.HAVE, Sport.FOOTBALL, GAME_DT, user_id=1
+    )
+    close_all_listings(db)
+    assert get_user_listings(db, user_id=1) == []
+
+    update_listing_status(db, listing_id, ListingStatus.OPEN)
+
+    assert len(get_user_listings(db, user_id=1)) == 1
+    assert len(get_open_listings(db)) == 1
 
 
 def test_close_all_listings_closes_open_and_matched(db):

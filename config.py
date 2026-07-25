@@ -1,5 +1,7 @@
 from dotenv import dotenv_values
 
+import channels
+
 
 class Config:
     def __init__(self):
@@ -19,6 +21,17 @@ class Config:
         self.guild_id = int(guild_str)
         self.channel_id = int(channel_str)
         self.token = token
+
+        # Per-sport routing. Missing entries fall back rather than failing
+        # startup; bot.py logs the resolved table so gaps stay visible.
+        self.sport_channels = channels.build(
+            channel_id=self.channel_id,
+            football=env.get("FOOTBALL_CHANNEL_ID"),
+            basketball=env.get("BASKETBALL_CHANNEL_ID"),
+            volleyball=env.get("VOLLEYBALL_CHANNEL_ID"),
+            baseball=env.get("BASEBALL_CHANNEL_ID"),
+            default=env.get("DEFAULT_SPORT_CHANNEL_ID"),
+        )
 
 
 settings = Config()
