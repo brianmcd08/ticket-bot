@@ -1,0 +1,1068 @@
+{
+ "events": [
+  {
+   "id": "401901174",
+   "uid": "s:400~l:402~e:401901174",
+   "date": "2026-11-14T05:00Z",
+   "name": "Air Force Falcons at Hawai'i Rainbow Warriors",
+   "shortName": "AF @ HAW",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "competitions": [
+    {
+     "id": "401901174",
+     "uid": "s:400~l:402~e:401901174~c:401901174",
+     "date": "2026-11-14T05:00Z",
+     "attendance": 0,
+     "type": {
+      "id": "1",
+      "abbreviation": "STD"
+     },
+     "timeValid": true,
+     "neutralSite": false,
+     "conferenceCompetition": true,
+     "playByPlayAvailable": false,
+     "recent": true,
+     "venue": {
+      "id": "540",
+      "fullName": "Stan Sheriff Center",
+      "address": {
+       "city": "Honolulu",
+       "state": "Hawaii"
+      },
+      "indoor": true
+     },
+     "competitors": [
+      {
+       "id": "62",
+       "uid": "s:400~l:402~t:62",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "team": {
+        "id": "62",
+        "uid": "s:400~l:402~t:62",
+        "location": "Hawai'i",
+        "name": "Rainbow Warriors",
+        "abbreviation": "HAW",
+        "displayName": "Hawai'i Rainbow Warriors",
+        "shortDisplayName": "Hawai'i",
+        "color": "004231",
+        "alternateColor": "ffffff",
+        "isActive": true,
+        "venue": {
+         "id": "540"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:62&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:62&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:62&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/62.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/62.png"
+       },
+       "score": "0",
+       "curatedRank": {
+        "current": 99
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Season",
+         "type": "total",
+         "summary": "22-4"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "15-2"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "5-1"
+        }
+       ]
+      },
+      {
+       "id": "2005",
+       "uid": "s:400~l:402~t:2005",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "team": {
+        "id": "2005",
+        "uid": "s:400~l:402~t:2005",
+        "location": "Air Force",
+        "name": "Falcons",
+        "abbreviation": "AF",
+        "displayName": "Air Force Falcons",
+        "shortDisplayName": "Air Force",
+        "color": "004a7b",
+        "alternateColor": "ffffff",
+        "isActive": true,
+        "venue": {
+         "id": "6900"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:2005&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:2005&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:2005&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2005.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/2005.png"
+       },
+       "score": "0",
+       "curatedRank": {
+        "current": 99
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Season",
+         "type": "total",
+         "summary": "10-16"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "7-3"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "1-12"
+        }
+       ]
+      }
+     ],
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 0,
+      "type": {
+       "id": "1",
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false,
+       "description": "Scheduled",
+       "detail": "Sat, November 13th at 12:00 AM EST",
+       "shortDetail": "11/14 - 12:00 AM EST"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "MW+"
+       ]
+      }
+     ],
+     "format": {
+      "regulation": {
+       "periods": 5
+      }
+     },
+     "startDate": "2026-11-14T05:00Z",
+     "broadcast": "MW+",
+     "geoBroadcasts": [
+      {
+       "type": {
+        "id": "4",
+        "shortName": "Streaming"
+       },
+       "market": {
+        "id": "1",
+        "type": "National"
+       },
+       "media": {
+        "shortName": "MW+"
+       },
+       "lang": "en",
+       "region": "us"
+      }
+     ],
+     "highlights": []
+    }
+   ],
+   "links": [],
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Sat, November 13th at 12:00 AM EST",
+     "shortDetail": "11/14 - 12:00 AM EST"
+    }
+   }
+  },
+  {
+   "id": "401884488",
+   "uid": "s:400~l:402~e:401884488",
+   "date": "2026-11-14T03:00Z",
+   "name": "Clemson Tigers at Stanford Cardinal",
+   "shortName": "CLEM @ STAN",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "competitions": [
+    {
+     "id": "401884488",
+     "uid": "s:400~l:402~e:401884488~c:401884488",
+     "date": "2026-11-14T03:00Z",
+     "attendance": 0,
+     "type": {
+      "id": "1",
+      "abbreviation": "STD"
+     },
+     "timeValid": true,
+     "neutralSite": false,
+     "conferenceCompetition": true,
+     "playByPlayAvailable": false,
+     "recent": true,
+     "venue": {
+      "id": "820",
+      "fullName": "Maples Pavilion",
+      "address": {
+       "city": "Stanford",
+       "state": "California"
+      },
+      "indoor": true
+     },
+     "competitors": [
+      {
+       "id": "24",
+       "uid": "s:400~l:402~t:24",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "team": {
+        "id": "24",
+        "uid": "s:400~l:402~t:24",
+        "location": "Stanford",
+        "name": "Cardinal",
+        "abbreviation": "STAN",
+        "displayName": "Stanford Cardinal",
+        "shortDisplayName": "Stanford",
+        "color": "b72931",
+        "alternateColor": "ffffff",
+        "isActive": true,
+        "venue": {
+         "id": "820"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:24&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:24&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:24&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/24.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/24.png"
+       },
+       "score": "2",
+       "linescores": [
+        {
+         "value": 22.0,
+         "displayValue": "22",
+         "winner": false,
+         "period": 1
+        },
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": false,
+         "period": 2
+        },
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": false,
+         "period": 3
+        }
+       ],
+       "ranks": [
+        {
+         "name": "AVCA Division I Women's Top 25 Poll",
+         "shortName": "AVCA Poll",
+         "type": "ap",
+         "headline": "2026 AVCA Division I Women's Top 25 Poll: Week 13",
+         "shortHeadline": "2026 AVCA Poll: Week 13",
+         "rank": {
+          "current": 24,
+          "previous": 23,
+          "record": {
+           "summary": "15-9"
+          }
+         }
+        }
+       ],
+       "curatedRank": {
+        "current": 24
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Season",
+         "type": "total",
+         "summary": "15-9"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "7-0"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "4-6"
+        }
+       ]
+      },
+      {
+       "id": "228",
+       "uid": "s:400~l:402~t:228",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "team": {
+        "id": "228",
+        "uid": "s:400~l:402~t:228",
+        "location": "Clemson",
+        "name": "Tigers",
+        "abbreviation": "CLEM",
+        "displayName": "Clemson Tigers",
+        "shortDisplayName": "Clemson",
+        "color": "f35b0f",
+        "alternateColor": "522d80",
+        "isActive": true,
+        "venue": {
+         "id": "5081"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:228&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:228&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:228&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/228.png"
+       },
+       "score": "1",
+       "linescores": [
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": false,
+         "period": 1
+        },
+        {
+         "value": 19.0,
+         "displayValue": "19",
+         "winner": false,
+         "period": 2
+        },
+        {
+         "value": 18.0,
+         "displayValue": "18",
+         "winner": false,
+         "period": 3
+        }
+       ],
+       "curatedRank": {
+        "current": 99
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Season",
+         "type": "total",
+         "summary": "9-17"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "9-9"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "0-8"
+        }
+       ]
+      }
+     ],
+     "notes": [],
+     "situation": {},
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 3,
+      "type": {
+       "id": "22",
+       "name": "STATUS_END_PERIOD",
+       "state": "in",
+       "completed": false,
+       "description": "End of Period",
+       "detail": "End of 3rd Set",
+       "shortDetail": "End of 3rd"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "ACCNX"
+       ]
+      }
+     ],
+     "format": {
+      "regulation": {
+       "periods": 5
+      }
+     },
+     "startDate": "2026-11-14T03:00Z",
+     "broadcast": "ACCNX",
+     "geoBroadcasts": [
+      {
+       "type": {
+        "id": "4",
+        "shortName": "Streaming"
+       },
+       "market": {
+        "id": "1",
+        "type": "National"
+       },
+       "media": {
+        "shortName": "ACCNX",
+        "logo": "https://a.espncdn.com/guid/f3b48d90-e60f-37fd-9581-5a763786784c/logos/default.png",
+        "darkLogo": ""
+       },
+       "lang": "en",
+       "region": "us"
+      }
+     ],
+     "highlights": []
+    }
+   ],
+   "links": [],
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 3,
+    "type": {
+     "id": "22",
+     "name": "STATUS_END_PERIOD",
+     "state": "in",
+     "completed": false,
+     "description": "End of Period",
+     "detail": "End of 3rd Set",
+     "shortDetail": "End of 3rd"
+    }
+   }
+  },
+  {
+   "id": "401883569",
+   "uid": "s:400~l:402~e:401883569",
+   "date": "2026-11-14T01:00Z",
+   "name": "Florida Gators at Mississippi State Bulldogs",
+   "shortName": "FLA @ MSST",
+   "season": {
+    "year": 2026,
+    "type": 2,
+    "slug": "regular-season"
+   },
+   "competitions": [
+    {
+     "id": "401883569",
+     "uid": "s:400~l:402~e:401883569~c:401883569",
+     "date": "2026-11-14T01:00Z",
+     "attendance": 0,
+     "type": {
+      "id": "1",
+      "abbreviation": "STD"
+     },
+     "timeValid": true,
+     "neutralSite": false,
+     "conferenceCompetition": true,
+     "playByPlayAvailable": false,
+     "recent": true,
+     "venue": {
+      "id": "5047",
+      "fullName": "Newell-Grissom Building",
+      "address": {
+       "city": "Starkville",
+       "state": "Mississippi"
+      },
+      "indoor": true
+     },
+     "competitors": [
+      {
+       "id": "344",
+       "uid": "s:400~l:402~t:344",
+       "type": "team",
+       "order": 0,
+       "homeAway": "home",
+       "winner": false,
+       "team": {
+        "id": "344",
+        "uid": "s:400~l:402~t:344",
+        "location": "Mississippi State",
+        "name": "Bulldogs",
+        "abbreviation": "MSST",
+        "displayName": "Mississippi State Bulldogs",
+        "shortDisplayName": "Mississippi St",
+        "color": "531122",
+        "alternateColor": "c1c6c8",
+        "isActive": true,
+        "venue": {
+         "id": "5047"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:344&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:344&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:344&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/344.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/344.png"
+       },
+       "score": "1",
+       "linescores": [
+        {
+         "value": 21.0,
+         "displayValue": "21",
+         "winner": false,
+         "period": 1
+        },
+        {
+         "value": 19.0,
+         "displayValue": "19",
+         "winner": false,
+         "period": 2
+        },
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": true,
+         "period": 3
+        },
+        {
+         "value": 13.0,
+         "displayValue": "13",
+         "winner": false,
+         "period": 4
+        }
+       ],
+       "curatedRank": {
+        "current": 99
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "17-8"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "0-0"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "0-0"
+        }
+       ]
+      },
+      {
+       "id": "57",
+       "uid": "s:400~l:402~t:57",
+       "type": "team",
+       "order": 1,
+       "homeAway": "away",
+       "winner": true,
+       "team": {
+        "id": "57",
+        "uid": "s:400~l:402~t:57",
+        "location": "Florida",
+        "name": "Gators",
+        "abbreviation": "FLA",
+        "displayName": "Florida Gators",
+        "shortDisplayName": "Florida",
+        "color": "2a42ce",
+        "alternateColor": "fa4616",
+        "isActive": true,
+        "venue": {
+         "id": "360"
+        },
+        "links": [
+         {
+          "rel": [
+           "roster",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:57&section=roster",
+          "text": "Roster",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "stats",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:57&section=stats",
+          "text": "Statistics",
+          "isExternal": false,
+          "isPremium": false
+         },
+         {
+          "rel": [
+           "schedule",
+           "sportscenter",
+           "app",
+           "team"
+          ],
+          "href": "sportscenter://x-callback-url/showClubhouse?uid=s:400~l:402~t:57&section=scores",
+          "text": "Schedule",
+          "isExternal": false,
+          "isPremium": false
+         }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/57.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/ncaa/500-dark/57.png"
+       },
+       "score": "3",
+       "linescores": [
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": true,
+         "period": 1
+        },
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": true,
+         "period": 2
+        },
+        {
+         "value": 21.0,
+         "displayValue": "21",
+         "winner": false,
+         "period": 3
+        },
+        {
+         "value": 25.0,
+         "displayValue": "25",
+         "winner": true,
+         "period": 4
+        }
+       ],
+       "ranks": [
+        {
+         "name": "AVCA Division I Women's Top 25 Poll",
+         "shortName": "AVCA Poll",
+         "type": "ap",
+         "headline": "2026 AVCA Division I Women's Top 25 Poll: Week 13",
+         "shortHeadline": "2026 AVCA Poll: Week 13",
+         "rank": {
+          "current": 4,
+          "previous": 4,
+          "record": {
+           "summary": "21-2"
+          }
+         }
+        }
+       ],
+       "curatedRank": {
+        "current": 4
+       },
+       "statistics": [],
+       "records": [
+        {
+         "name": "overall",
+         "abbreviation": "Game",
+         "type": "total",
+         "summary": "22-2"
+        },
+        {
+         "name": "Home",
+         "type": "home",
+         "summary": "0-0"
+        },
+        {
+         "name": "Road",
+         "type": "road",
+         "summary": "0-0"
+        }
+       ]
+      }
+     ],
+     "notes": [],
+     "status": {
+      "clock": 0.0,
+      "displayClock": "0:00",
+      "period": 4,
+      "type": {
+       "id": "3",
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true,
+       "description": "Final",
+       "detail": "Final",
+       "shortDetail": "Final"
+      }
+     },
+     "broadcasts": [
+      {
+       "market": "national",
+       "names": [
+        "SECN+"
+       ]
+      }
+     ],
+     "format": {
+      "regulation": {
+       "periods": 5
+      }
+     },
+     "startDate": "2026-11-14T01:00Z",
+     "broadcast": "SECN+",
+     "geoBroadcasts": [
+      {
+       "type": {
+        "id": "4",
+        "shortName": "Streaming"
+       },
+       "market": {
+        "id": "1",
+        "type": "National"
+       },
+       "media": {
+        "shortName": "SECN+",
+        "logo": "https://a.espncdn.com/guid/d1e3d7c4-8e72-37f3-b9b9-515573fd5526/logos/default.png",
+        "darkLogo": ""
+       },
+       "lang": "en",
+       "region": "us"
+      }
+     ],
+     "highlights": [
+      {
+       "id": 50476784,
+       "cerebroId": "6af7d1b7f1fa1079196f17b7",
+       "source": "espn",
+       "headline": "Florida vs. Mississippi St.: Game Highlights",
+       "description": "Florida vs. Mississippi St.: Game Highlights",
+       "lastModified": "2026-11-14T03:13:01Z",
+       "originalPublishDate": "2026-11-14T03:12:55Z",
+       "duration": 79,
+       "timeRestrictions": {
+        "embargoDate": "2026-11-14T03:12:54Z",
+        "expirationDate": "2038-01-01T04:59:59Z"
+       },
+       "deviceRestrictions": {
+        "devices": [
+         "settop",
+         "tablet",
+         "handset",
+         "ipad",
+         "desktop"
+        ],
+        "type": "whitelist"
+       },
+       "thumbnail": "https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.jpg",
+       "links": {
+        "api": {
+         "artwork": {
+          "href": "https://artwork.api.espn.com/artwork/collections/media/fefcef80-0cd0-422d-b443-f4a58dcd6600"
+         },
+         "self": {
+          "href": "https://content.core.api.espn.com/v1/video/clips/50476784"
+         }
+        },
+        "mobile": {
+         "href": "https://watch.auth.api.espn.com/video/auth/brightcove/fefcef80-0cd0-422d-b443-f4a58dcd6600/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50476784/game-highlights",
+         "alert": {
+          "href": "https://m.espn.com/general/video/videoAlert?vid=50476784"
+         },
+         "progressiveDownload": {
+          "href": "https://watch.auth.api.espn.com/video/auth/brightcove/fefcef80-0cd0-422d-b443-f4a58dcd6600/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50476784/game-highlights"
+         },
+         "source": {
+          "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4"
+         },
+         "streaming": {
+          "href": "https://watch.auth.api.espn.com/video/auth/brightcove/fefcef80-0cd0-422d-b443-f4a58dcd6600/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50476784/game-highlights"
+         }
+        },
+        "source": {
+         "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4",
+         "HD": {
+          "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4"
+         },
+         "HLS": {
+          "href": "https://cmp-espn.media.dssott.com/opp/hls/espn/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8",
+          "9x16": {
+           "href": "https://cmp-espn.media.dssott.com/opp/hls/espn/9x16/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8"
+          },
+          "HD": {
+           "href": "https://cmp-espn.media.dssott.com/opp/hls/espn/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8"
+          },
+          "cmaf": {
+           "href": "https://cmp-espn.media.dssott.com/opp/cmaf/espn/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8",
+           "9x16": {
+            "href": "https://cmp-espn.media.dssott.com/opp/cmaf/espn/9x16/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8"
+           },
+           "cmb": {
+            "href": "https://cmp-espn.media.dssott.com/opp/cmaf/espn/cmb/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8"
+           }
+          },
+          "cmb": {
+           "href": "https://cmp-espn.media.dssott.com/opp/hls/espn/cmb/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207/playlist.m3u8"
+          },
+          "shield": {
+           "href": "https://watch.auth.api.espn.com/video/auth/media/fefcef80-0cd0-422d-b443-f4a58dcd6600/asset"
+          }
+         },
+         "flash": {
+          "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4"
+         },
+         "full": {
+          "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4"
+         },
+         "mezzanine": {
+          "href": "https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/23059c36-2f8b-46f2-ac19-069748402207/23059c36-2f8b-46f2-ac19-069748402207.mp4"
+         }
+        },
+        "sportscenter": {
+         "href": "sportscenter://x-callback-url/showVideo?videoID=50476784&videoDSI=60b09fd0a7390"
+        },
+        "web": {
+         "href": "https://www.espn.com/video/clip/_/id/50476784/game-highlights",
+         "self": {
+          "href": "https://www.espn.com/video/clip/_/id/50476784/game-highlights",
+          "dsi": {
+           "href": "https://www.espn.com/video/clip?id=60b09fd0a7390"
+          }
+         }
+        }
+       },
+       "ad": {
+        "bundle": "sportscenter",
+        "sport": "Volleyball"
+       },
+       "tracking": {
+        "coverageType": "Final Game Highlight",
+        "leagueName": "NCAA Women's Volleyball",
+        "program": "Womens Volleyball",
+        "sportName": "volleyball",
+        "trackingId": "dm_20261114_VOLLEYBALL_florida_vs_mississippi_st_game_highlights",
+        "trackingName": "CWVOL_One-Play (Florida vs. Mississippi St.: Game Highlights) 2026/11/14 ESHEET"
+       }
+      }
+     ]
+    }
+   ],
+   "links": [],
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   }
+  }
+ ]
+}

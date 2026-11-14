@@ -65,6 +65,81 @@ def init_db(db_path):
                     status INTEGER NOT NULL DEFAULT 1
                 )
             """)
+            # One row per ESPN match the bot has posted about. Lets a restart
+            # mid-match keep editing the same scoreboard message and never send
+            # the start or final post twice.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS scoreboard_messages (
+                    event_id TEXT PRIMARY KEY,
+                    channel_id INTEGER NOT NULL DEFAULT 0,
+                    message_id INTEGER NOT NULL DEFAULT 0,
+                    start_posted INTEGER NOT NULL DEFAULT 0,
+                    final_posted INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+
+
+@dataclass
+class ScoreboardRecord:
+    event_id: str
+    channel_id: int
+    message_id: int
+    start_posted: bool
+    final_posted: bool
+
+
+def get_scoreboard(db_path, event_id) -> Optional[ScoreboardRecord]:
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM scoreboard_messages WHERE event_id = ?", (event_id,)
+        ).fetchone()
+    if row is None:
+        return None
+    return ScoreboardRecord(
+        event_id=row["event_id"],
+        channel_id=row["channel_id"],
+        message_id=row["message_id"],
+        start_posted=bool(row["start_posted"]),
+        final_posted=bool(row["final_posted"]),
+    )
+
+
+def save_scoreboard_message(db_path, event_id, channel_id, message_id):
+    """Record (or replace) the scoreboard message for a match."""
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                INSERT INTO scoreboard_messages (event_id, channel_id, message_id)
+                VALUES (?, ?, ?)
+                ON CONFLICT(event_id) DO UPDATE SET
+                    channel_id = excluded.channel_id,
+                    message_id = excluded.message_id
+                """,
+                (event_id, channel_id, message_id),
+            )
+
+
+def _mark(db_path, event_id, column):
+    # column comes only from the two callers below, never from user input
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                f"""
+                INSERT INTO scoreboard_messages (event_id, {column}) VALUES (?, 1)
+                ON CONFLICT(event_id) DO UPDATE SET {column} = 1
+                """,
+                (event_id,),
+            )
+
+
+def mark_start_posted(db_path, event_id):
+    _mark(db_path, event_id, "start_posted")
+
+
+def mark_final_posted(db_path, event_id):
+    _mark(db_path, event_id, "final_posted")
 
 
 def add_listing(db_path, listing: Listing):
