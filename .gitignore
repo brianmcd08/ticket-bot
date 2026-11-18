@@ -211,6 +211,7 @@ __marimo__/
 chroma_langchain_db/
 
 tickets.db
+dev.db
 backups/
 # .env alone does not cover .env.bak, .env.local etc, which carry the token too
 .env.*

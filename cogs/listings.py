@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 import discord
 from discord import app_commands
@@ -16,25 +16,28 @@ from database import (
     update_listing_status,
     update_message_id,
 )
-from enums import ListingStatus, ListingType, Sport
+from enums import SPORT_LABELS, ListingStatus, ListingType, Sport
 from matching import find_matches
-from utils import build_embed, build_help_embed, format_listing_line
+from utils import (
+    build_embed,
+    build_help_embed,
+    format_listing_line,
+    stray_command,
+    stray_command_hint,
+)
 from validators import (
     validate_calendar_date,
     validate_day,
     validate_month,
     validate_year,
 )
-from views import CloseView, ConfirmClearView, replace_message_embed
+from views import CloseView, ConfirmClearView, SportPickView, replace_message_embed
 
 log = logging.getLogger("ticketbot")
 
 SPORT_CHOICES = [
-    app_commands.Choice(name="Football", value=Sport.FOOTBALL),
-    app_commands.Choice(name="Men's Basketball", value=Sport.MENS_BASKETBALL),
-    app_commands.Choice(name="Volleyball", value=Sport.VOLLEYBALL),
-    app_commands.Choice(name="Women's Basketball", value=Sport.WOMENS_BASKETBALL),
-    app_commands.Choice(name="Baseball", value=Sport.BASEBALL),
+    app_commands.Choice(name=label, value=sport.value)
+    for sport, label in SPORT_LABELS.items()
 ]
 
 # Listings are identified by game day only. Start time is not collected: matching
@@ -100,25 +103,62 @@ class ListingsCog(commands.Cog):
         """Sports implied by where the command was run. Empty means no filter."""
         return self.sport_channels.sports_for_channel(interaction.channel_id)
 
-    def resolve_sport(self, interaction: discord.Interaction, sport):
+    def resolve_sport(
+        self, interaction: discord.Interaction, sport
+    ) -> tuple[Optional[Sport], list[Sport]]:
         """Sport from the explicit option, else inferred from the channel.
 
-        Returns (sport, error_message); exactly one is None. An explicit choice
-        always wins, so a football listing can still be posted from anywhere.
+        Returns (sport, []) when it is known, or (None, sports to offer) when
+        the member has to choose: the channel's sports if it covers several
+        (basketball), otherwise all of them. An explicit choice always wins,
+        so a football listing can still be posted from anywhere.
         """
         if sport is not None:
-            return Sport(sport.value), None
+            return Sport(sport.value), []
 
         candidates = self.sports_in_channel(interaction)
         if len(candidates) == 1:
-            return candidates[0], None
-        if len(candidates) > 1:
-            names = " or ".join(_sport_label(s) for s in candidates)
-            return None, (
-                f"This channel covers {names}, so I can't tell which you mean. "
-                f"Please pick the sport."
-            )
-        return None, "Please pick the sport, or run this in a sport's channel."
+            return candidates[0], []
+        return None, candidates or list(SPORT_LABELS)
+
+    async def _post_with_sport(
+        self,
+        interaction: discord.Interaction,
+        sport,
+        make_listing: Callable[[Sport], Listing],
+    ):
+        """Post now if the sport is known, else ask for it with a dropdown.
+
+        Called after every other field is validated, so picking a sport never
+        leads to a date error.
+        """
+        resolved, choices = self.resolve_sport(interaction, sport)
+        if resolved is not None:
+            await self._post_listing(interaction, make_listing(resolved))
+            return
+
+        async def on_pick(pick_interaction: discord.Interaction, picked: Sport):
+            await self._post_listing(pick_interaction, make_listing(picked))
+
+        view = SportPickView(choices, on_pick)
+        view.message = await interaction.followup.send(
+            "Which sport is this for?", view=view, ephemeral=True, wait=True
+        )
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """Point out a slash command that mobile sent as a plain message."""
+        if message.author.bot or message.guild is None:
+            return
+        names = {command.name for command in self.get_app_commands()}
+        name = stray_command(message.content, names)
+        if name is None:
+            return
+        log.info("Stray /%s text from %s, sent hint", name, message.author.id)
+        try:
+            await message.reply(stray_command_hint(name), mention_author=True)
+        except discord.HTTPException:
+            log.exception("Could not reply to stray /%s message", name)
 
     async def _post_listing(
         self,
@@ -185,13 +225,6 @@ class ListingsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        resolved_sport, sport_error = self.resolve_sport(interaction, sport)
-        if resolved_sport is None:
-            await interaction.followup.send(
-                sport_error or "Please pick the sport.", ephemeral=True
-            )
-            return
-
         errors = [
             validate_month(month),
             validate_day(day),
@@ -207,16 +240,20 @@ class ListingsCog(commands.Cog):
             await interaction.followup.send("\n".join(errors), ephemeral=True)
             return
 
-        listing = Listing(
-            user_id=interaction.user.id,
-            listing_type=ListingType.HAVE,
-            sport=resolved_sport,
-            game_datetime=datetime(year, month, day),
-            quantity=quantity,
-            notes=notes,
-            posted_at=datetime.now().isoformat(),
+        user_id = interaction.user.id
+        await self._post_with_sport(
+            interaction,
+            sport,
+            lambda resolved: Listing(
+                user_id=user_id,
+                listing_type=ListingType.HAVE,
+                sport=resolved,
+                game_datetime=datetime(year, month, day),
+                quantity=quantity,
+                notes=notes,
+                posted_at=datetime.now().isoformat(),
+            ),
         )
-        await self._post_listing(interaction, listing)
 
     @app_commands.command(name="want", description="Post what tickets you want")
     @app_commands.describe(**DESCRIBE_KWARGS)
@@ -232,13 +269,6 @@ class ListingsCog(commands.Cog):
         notes: Optional[str] = None,
     ):
         await interaction.response.defer(ephemeral=True)
-
-        resolved_sport, sport_error = self.resolve_sport(interaction, sport)
-        if resolved_sport is None:
-            await interaction.followup.send(
-                sport_error or "Please pick the sport.", ephemeral=True
-            )
-            return
 
         errors = [
             validate_month(month) if month is not None else None,
@@ -271,16 +301,20 @@ class ListingsCog(commands.Cog):
         else:
             game_datetime = None
 
-        listing = Listing(
-            user_id=interaction.user.id,
-            listing_type=ListingType.WANT,
-            sport=resolved_sport,
-            game_datetime=game_datetime,
-            quantity=quantity,
-            notes=notes,
-            posted_at=datetime.now().isoformat(),
+        user_id = interaction.user.id
+        await self._post_with_sport(
+            interaction,
+            sport,
+            lambda resolved: Listing(
+                user_id=user_id,
+                listing_type=ListingType.WANT,
+                sport=resolved,
+                game_datetime=game_datetime,
+                quantity=quantity,
+                notes=notes,
+                posted_at=datetime.now().isoformat(),
+            ),
         )
-        await self._post_listing(interaction, listing)
 
     async def _notify_matches(self, listing: Listing, listing_id: int, channel):
         matches = find_matches(db_path=self.db_path, listing=listing)

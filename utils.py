@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Iterable, Optional
 
 import discord
 
@@ -192,3 +193,28 @@ def build_help_embed() -> discord.Embed:
     # /clear and /reopen are intentionally not listed: admin-only commands.
     embed.set_footer(text="Only visible to you — run /help anytime to see this again.")
     return embed
+
+
+def stray_command(content: str, command_names: Iterable[str]) -> Optional[str]:
+    """The command name if a message is one of our slash commands sent as text.
+
+    On Discord mobile, pressing return after typing "/have" inserts a newline
+    instead of picking the command from the popup, so the app sends it as an
+    ordinary message and the bot never gets an interaction.
+    """
+    stripped = content.lstrip()
+    if not stripped.startswith("/"):
+        return None
+    words = stripped[1:].split(maxsplit=1)
+    if not words:
+        return None
+    name = words[0].lower()
+    return name if name in command_names else None
+
+
+def stray_command_hint(name: str) -> str:
+    return (
+        f"That `/{name}` went through as a regular message, so I didn't get it. "
+        f"Type `/{name}`, then **tap /{name} in the menu that pops up** "
+        f"(don't press return). Fill in the boxes and hit send."
+    )

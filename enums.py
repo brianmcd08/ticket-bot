@@ -18,3 +18,13 @@ class ListingStatus(IntEnum):
     CLOSED = 0
     OPEN = 1
     MATCHED = 2
+
+
+# Display names, in the order sports are offered in menus.
+SPORT_LABELS: dict[Sport, str] = {
+    Sport.FOOTBALL: "Football",
+    Sport.MENS_BASKETBALL: "Men's Basketball",
+    Sport.VOLLEYBALL: "Volleyball",
+    Sport.WOMENS_BASKETBALL: "Women's Basketball",
+    Sport.BASEBALL: "Baseball",
+}

@@ -1,11 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Optional, Union
+from typing import Awaitable, Callable, Optional, Union
 
 import discord
 
 from database import close_all_listings, update_listing_status
-from enums import ListingStatus, ListingType
+from enums import SPORT_LABELS, ListingStatus, ListingType, Sport
 from utils import MATCH_HINT_NAMES
 
 log = logging.getLogger("ticketbot")
@@ -74,6 +74,59 @@ async def replace_message_embed(channel, message_id, embed):
     except discord.HTTPException:
         log.exception("Could not restore message %s", message_id)
         return None
+
+
+class SportSelect(discord.ui.Select["SportPickView"]):
+    def __init__(self, sports: list[Sport]):
+        options = [
+            discord.SelectOption(label=SPORT_LABELS.get(s, s.value), value=s.value)
+            for s in sports
+        ]
+        super().__init__(placeholder="Choose the sport...", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        if view is None or view.picked:
+            return
+        view.picked = True
+        sport = Sport(self.values[0])
+        # Acknowledge by swapping the menu out, so it can't be picked twice and
+        # the rest of the work can reply through interaction.followup.
+        await interaction.response.edit_message(
+            content=f"Posting your {SPORT_LABELS.get(sport, sport.value)} listing...",
+            view=None,
+        )
+        view.stop()
+        await view.on_pick(interaction, sport)
+
+
+class SportPickView(discord.ui.View):
+    """Asks which sport a /have or /want is for when the channel doesn't say.
+
+    The sport option is optional and hidden under "+N more" on mobile, so a
+    member in the general channel would otherwise hit a dead end.
+    """
+
+    def __init__(
+        self,
+        sports: list[Sport],
+        on_pick: Callable[[discord.Interaction, Sport], Awaitable[None]],
+    ):
+        super().__init__(timeout=900)
+        self.on_pick = on_pick
+        self.picked = False
+        self.message: Optional[Union[discord.Message, discord.WebhookMessage]] = None
+        self.add_item(SportSelect(sports[:MAX_SELECT_OPTIONS]))
+
+    async def on_timeout(self):
+        if self.message is None or self.picked:
+            return
+        try:
+            await self.message.edit(
+                content="This menu expired. Nothing was posted.", view=None
+            )
+        except discord.HTTPException:
+            pass
 
 
 class CloseSelect(discord.ui.Select[discord.ui.View]):

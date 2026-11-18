@@ -16,7 +16,12 @@ class TicketBot(commands.Bot):
     synced: list[discord.app_commands.AppCommand]
 
     def __init__(self):
-        super().__init__(command_prefix="!", intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        # Privileged: must also be switched on under Bot -> Privileged Gateway
+        # Intents in the Developer Portal, or login fails. Needed to spot
+        # "/have" that mobile sent as a plain message (see ListingsCog.on_message).
+        intents.message_content = True
+        super().__init__(command_prefix="!", intents=intents)
         # Populated by setup_hook; initialized so on_ready can't AttributeError
         # if the sync call fails.
         self.synced = []
@@ -37,8 +42,17 @@ class TicketBot(commands.Bot):
         self.tree.copy_global_to(guild=discord.Object(id=settings.guild_id))
         self.synced = await self.tree.sync(guild=discord.Object(id=settings.guild_id))
 
+    async def on_message(self, message: discord.Message):
+        # The bot has no prefix commands, so skip process_commands: with message
+        # content on, it would log a CommandNotFound for every "!..." message.
+        # Cog listeners (ListingsCog.on_message) are dispatched regardless.
+        pass
+
     async def on_ready(self):
-        print(f"Successfully connected! Logged in as {client.user}")
+        print(
+            f"Successfully connected! Logged in as {client.user} "
+            f"(config: {settings.env_file})"
+        )
         print(
             f"Synced {len(self.synced)} commands: {[cmd.name for cmd in self.synced]}"
         )

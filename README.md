@@ -23,7 +23,7 @@ Use this when you have tickets you want to give away or sell.
 - **Quantity** — number of tickets
 
 **Optional:**
-- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, or Baseball. Can be left blank when you run the command inside a sport's channel; it's taken from the channel.
+- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, or Baseball. Can be left blank when you run the command inside a sport's channel; it's taken from the channel. If the channel doesn't say (or covers both basketball teams), the bot asks with a dropdown.
 - **Notes** — game time, section, row, asking price, or anything else useful
 
 > Listings are identified by the game date. There's no start time field, since matching works on the day; put the tip-off time in **Notes** if it matters.
@@ -140,6 +140,7 @@ Listings expire automatically — no action needed on your part:
 - Use **Notes** to share your contact preference, seat location, or asking price
 - You can have multiple active listings at the same time
 - Close your listing once the exchange is done so others know it's taken
+- **On your phone:** after typing `/have`, tap the command in the menu that pops up. Pressing return sends it as a plain message instead; the bot will reply with a reminder if that happens
 - If you're flexible on the game, skip the date fields in `/want` — you'll match with any available tickets for that sport
 
 ---
@@ -177,6 +178,8 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    `CHANNEL_ID` is still used for server-wide announcements, such as the notice `/clear` posts.
 
    The bot needs View Channel, Send Messages, Embed Links, and Read Message History **in every sport channel**, and members need Use Application Commands.
+
+   In the [Developer Portal](https://discord.com/developers/applications), under **Bot → Privileged Gateway Intents**, turn on **Message Content Intent**. The bot uses it to notice a `/have` that a phone sent as plain text and reply with a hint. Without it the bot fails to log in.
 4. Install dependencies. This also downloads a matching Python (>=3.12) if the system Python is older:
    ```bash
    uv sync
@@ -187,6 +190,20 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    sudo systemctl daemon-reload
    sudo systemctl enable --now ticket-bot
    ```
+
+### Testing locally
+
+`.env` holds the real bot's settings, so don't run the bot from it on your own machine: two copies on one token both answer every command. Instead, use a separate test bot in a private test server:
+
+1. Create the test server and a few channels (include one shared basketball channel).
+2. In the Developer Portal, create a second application, copy its bot token, and turn on **Message Content Intent**.
+3. Invite it via **OAuth2 → URL Generator** with the `bot` and `applications.commands` scopes and the permissions listed above.
+4. Fill in `.env.dev` (gitignored) with the test token, server ID and channel IDs, with `DB_PATH=dev.db`.
+5. Run it:
+   ```bash
+   TICKETBOT_ENV=.env.dev uv run python bot.py
+   ```
+   The startup line shows which config file was loaded.
 
 ### Day-to-day
 
