@@ -19,9 +19,6 @@ class TasksCog(commands.Cog):
         self.expire_listings_task.start()
         self.close_matched_listings_task.start()
 
-    def channel_for(self, sport):
-        return self.sport_channels.resolve(self.bot, sport)
-
     async def cog_unload(self):
         # Cancel the loop when the Cog is unloaded to prevent memory leaks
         self.expire_listings_task.cancel()
@@ -62,8 +59,7 @@ class TasksCog(commands.Cog):
                     view=CloseMatchedListingsView(
                         self.db_path,
                         row["id"],
-                        self.channel_for,
-                        row["sport"],
+                        self.bot.get_channel(row["channel_id"]),
                         row["message_id"],
                     ),
                 )

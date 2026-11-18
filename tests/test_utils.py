@@ -222,8 +222,13 @@ def test_help_lists_the_public_commands():
 def test_help_explains_where_listings_are_posted():
     embed = build_help_embed()
     rendered = " ".join(f"{f.name} {f.value}" for f in embed.fields)
-    assert "channel for its sport" in rendered
-    assert "basketball" in rendered.lower()
+    assert "#ticket-exchange" in rendered
+    assert "channel for its sport" not in rendered
+
+
+def test_help_points_to_the_notification_buttons():
+    rendered = " ".join(f"{f.name} {f.value}" for f in build_help_embed().fields)
+    assert "sport notifications" in rendered
 
 
 def test_help_explains_the_channel_shortcut():

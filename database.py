@@ -18,6 +18,8 @@ class Listing:
     posted_at: str
     status: ListingStatus = ListingStatus.OPEN
     message_id: int = 0
+    # The channel the card was posted in. 0 means no card (the post failed).
+    channel_id: int = 0
 
     # helper methods for datetime conversion
     def game_datetime_to_str(self) -> Optional[str]:
@@ -45,6 +47,7 @@ class Listing:
             posted_at=row["posted_at"],
             status=ListingStatus(row["status"]),
             message_id=row["message_id"],
+            channel_id=row["channel_id"],
         )
 
 
@@ -63,6 +66,23 @@ def init_db(db_path):
                     message_id INTEGER NOT NULL DEFAULT 0,
                     posted_at TEXT NOT NULL,
                     status INTEGER NOT NULL DEFAULT 1
+                )
+            """)
+            # Added after launch: listings used to live in their sport's
+            # channel, found again by routing the sport. Each now records its
+            # own channel, so routing can change without stranding old cards.
+            columns = {r[1] for r in conn.execute("PRAGMA table_info(listings)")}
+            if "channel_id" not in columns:
+                conn.execute(
+                    "ALTER TABLE listings "
+                    "ADD COLUMN channel_id INTEGER NOT NULL DEFAULT 0"
+                )
+            # Opt-in roles pinged for a sport's listings and scores. Created by
+            # the bot from /rolepanel; the id is kept so a rename doesn't break.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS sport_roles (
+                    sport TEXT PRIMARY KEY,
+                    role_id INTEGER NOT NULL
                 )
             """)
             # One row per ESPN match the bot has posted about. Lets a restart
@@ -156,10 +176,11 @@ def add_listing(db_path, listing: Listing):
                     game_datetime,
                     quantity,
                     notes,
-                    posted_at                
+                    posted_at,
+                    channel_id
                 )
                 VALUES
-                (?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     listing.user_id,
@@ -169,6 +190,7 @@ def add_listing(db_path, listing: Listing):
                     listing.quantity,
                     listing.notes,
                     listing.posted_at,
+                    listing.channel_id,
                 ),
             )
 
@@ -176,6 +198,59 @@ def add_listing(db_path, listing: Listing):
             if not row_id:
                 raise RuntimeError("Failed to insert listing into database")
             return row_id
+
+
+def backfill_listing_channels(db_path, channel_id_for) -> int:
+    """Fill in channel_id for cards posted before listings recorded it.
+
+    channel_id_for maps a sport to the channel its listings were routed to at
+    the time. Only rows with a card are touched. Returns how many were filled.
+    """
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            rows = conn.execute(
+                "SELECT id, sport FROM listings "
+                "WHERE channel_id = 0 AND message_id != 0"
+            ).fetchall()
+            conn.executemany(
+                "UPDATE listings SET channel_id = ? WHERE id = ?",
+                [(channel_id_for(row["sport"]), row["id"]) for row in rows],
+            )
+    return len(rows)
+
+
+def update_message_location(db_path, listing_id, channel_id, message_id):
+    """Point a listing at a newly posted card."""
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                "UPDATE listings SET channel_id = ?, message_id = ? WHERE id = ?",
+                (channel_id, message_id, listing_id),
+            )
+
+
+def get_sport_roles(db_path) -> dict[str, int]:
+    """sport value -> role id, for every sport that has a role."""
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        rows = conn.execute("SELECT sport, role_id FROM sport_roles").fetchall()
+    return {sport: role_id for sport, role_id in rows}
+
+
+def get_sport_role(db_path, sport) -> Optional[int]:
+    return get_sport_roles(db_path).get(str(sport))
+
+
+def save_sport_role(db_path, sport, role_id):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                INSERT INTO sport_roles (sport, role_id) VALUES (?, ?)
+                ON CONFLICT(sport) DO UPDATE SET role_id = excluded.role_id
+                """,
+                (str(sport), role_id),
+            )
 
 
 def update_message_id(db_path, listing_id, message_id):

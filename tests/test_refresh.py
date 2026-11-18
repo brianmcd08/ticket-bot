@@ -15,7 +15,7 @@ def test_skipped_reasons_are_reported_separately():
     ).summary()
     assert "Re-rendered 2" in summary
     assert "1 listing(s) have no post" in summary
-    assert "3 listing(s) are for a sport whose channel I can't reach" in summary
+    assert "3 listing(s) have a post in a channel I can't reach" in summary
     assert "1 listing(s) were left alone" in summary
 
 

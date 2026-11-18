@@ -12,9 +12,11 @@ from database import (
     add_listing,
     get_listing,
     get_open_listings,
+    get_sport_role,
     get_user_listings,
     update_listing_status,
     update_message_id,
+    update_message_location,
 )
 from enums import SPORT_LABELS, ListingStatus, ListingType, Sport
 from matching import find_matches
@@ -77,8 +79,8 @@ class RefreshResult:
             )
         if self.no_channel:
             lines.append(
-                f"{self.no_channel} listing(s) are for a sport whose channel I "
-                f"can't reach. Check the channel config."
+                f"{self.no_channel} listing(s) have a post in a channel I "
+                f"can't reach any more."
             )
         if self.unknown_poster:
             lines.append(
@@ -95,9 +97,9 @@ class ListingsCog(commands.Cog):
         self.channel_id = channel_id
         self.sport_channels = sport_channels
 
-    def channel_for(self, sport):
-        """The channel a listing for this sport lives in."""
-        return self.sport_channels.resolve(self.bot, sport)
+    def listings_channel(self):
+        """ticket-exchange: where every new listing card is posted."""
+        return self.bot.get_channel(self.channel_id)
 
     def sports_in_channel(self, interaction: discord.Interaction) -> list[Sport]:
         """Sports implied by where the command was run. Empty means no filter."""
@@ -170,25 +172,30 @@ class ListingsCog(commands.Cog):
         The interaction is already deferred by the caller, so every reply here
         goes through followup and none of this work races the 3 second deadline.
         """
-        channel = self.channel_for(listing.sport)
+        channel = self.listings_channel()
         if channel is None:
-            log.error(
-                "Channel %s for sport %s not found or not visible",
-                self.sport_channels.channel_id_for(listing.sport),
-                listing.sport,
-            )
+            log.error("Listings channel %s not found or not visible", self.channel_id)
             await interaction.followup.send(
-                "I can't reach the channel for that sport right now. "
+                "I can't reach the ticket channel right now. "
                 "Please let an admin know.",
                 ephemeral=True,
             )
             return
 
+        listing.channel_id = channel.id
         listing_id = add_listing(self.db_path, listing)
 
+        # Ping the sport's opt-in role, if /rolepanel has created one.
+        role_id = get_sport_role(self.db_path, listing.sport)
         try:
             message = await channel.send(
-                embed=build_embed(listing, listing_id, interaction.user)
+                content=f"<@&{role_id}>" if role_id else None,
+                embed=build_embed(listing, listing_id, interaction.user),
+                allowed_mentions=discord.AllowedMentions(
+                    everyone=False,
+                    users=False,
+                    roles=[discord.Object(role_id)] if role_id else False,
+                ),
             )
             update_message_id(
                 self.db_path, listing_id=listing_id, message_id=message.id
@@ -451,7 +458,7 @@ class ListingsCog(commands.Cog):
             )
             return
 
-        view = CloseView(listings, self.db_path, self.channel_for)
+        view = CloseView(listings, self.db_path, self.bot.get_channel)
         view.message = await interaction.followup.send(
             "Select a listing to close:", view=view, ephemeral=True, wait=True
         )
@@ -504,10 +511,13 @@ class ListingsCog(commands.Cog):
             return
 
         listing = Listing.from_row(row)
-        channel = self.channel_for(listing.sport)
-        if channel is None:
+        # The card stays where it was posted; only a missing card is reposted,
+        # and that goes to ticket-exchange like any new listing.
+        card_channel = self.bot.get_channel(listing.channel_id)
+        listings_channel = self.listings_channel()
+        if card_channel is None and listings_channel is None:
             await interaction.followup.send(
-                "I can't reach the channel for that sport right now.", ephemeral=True
+                "I can't reach the ticket channel right now.", ephemeral=True
             )
             return
 
@@ -521,13 +531,16 @@ class ListingsCog(commands.Cog):
             poster = interaction.user
         embed = build_embed(listing, listing_id, poster)
 
-        message = await replace_message_embed(channel, row["message_id"], embed)
+        message = await replace_message_embed(card_channel, row["message_id"], embed)
         if message is None:
             # Original post is gone; post a fresh one and repoint the row.
+            channel = listings_channel or card_channel
+            # Both being None was ruled out above; this narrows the type.
+            assert channel is not None
             message = await channel.send(embed=embed)
-            update_message_id(
-                self.db_path, listing_id=listing_id, message_id=message.id
-            )
+            update_message_location(self.db_path, listing_id, channel.id, message.id)
+            listing.channel_id = channel.id
+        channel = message.channel
 
         await interaction.followup.send(
             f"Listing {listing_id} reopened.", ephemeral=True
@@ -590,7 +603,7 @@ class ListingsCog(commands.Cog):
                 continue
 
             listing = Listing.from_row(row)
-            channel = self.channel_for(listing.sport)
+            channel = self.bot.get_channel(listing.channel_id)
             if channel is None:
                 result.no_channel += 1
                 continue
@@ -638,7 +651,7 @@ class ListingsCog(commands.Cog):
 
         announce_channel = self.bot.get_channel(self.channel_id)
         view = ConfirmClearView(
-            self.db_path, self.channel_for, announce_channel, len(rows)
+            self.db_path, self.bot.get_channel, announce_channel, len(rows)
         )
         view.message = await interaction.followup.send(
             f"This will close **all {len(rows)} active listing(s)** for everyone "

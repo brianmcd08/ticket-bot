@@ -130,17 +130,17 @@ class SportPickView(discord.ui.View):
 
 
 class CloseSelect(discord.ui.Select[discord.ui.View]):
-    def __init__(self, listings, db_path, channel_for):
+    def __init__(self, listings, db_path, get_channel):
         self.db_path = db_path
-        # Listings live in their sport's channel, so the channel is resolved per
-        # row rather than fixed for the whole view.
-        self.channel_for = channel_for
+        # Each listing records the channel its card is in (older ones are in
+        # their sport's channel), so the channel is resolved per row.
+        self.get_channel = get_channel
 
         options = [
             discord.SelectOption(
                 label=f"{'HAVE' if row['listing_type'] == ListingType.HAVE else 'WANT'} — {row['sport'].replace('_', ' ').title()}",
                 description=_format_game_day(row["game_datetime"]),
-                value=f"{row['id']},{row['message_id']},{row['sport']}",
+                value=f"{row['id']},{row['message_id']},{row['channel_id']}",
             )
             for row in listings[:MAX_SELECT_OPTIONS]
         ]
@@ -149,25 +149,26 @@ class CloseSelect(discord.ui.Select[discord.ui.View]):
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        raw_id, raw_message_id, sport = self.values[0].split(",")
+        raw_id, raw_message_id, raw_channel_id = self.values[0].split(",")
         listing_id = int(raw_id)
         message_id = int(raw_message_id)
+        channel_id = int(raw_channel_id)
 
         update_listing_status(self.db_path, listing_id, ListingStatus.CLOSED)
         await interaction.followup.send("Listing closed!", ephemeral=True)
 
         # Fetch + edit is two HTTP calls; keep them off the response path.
-        await mark_message_closed(self.channel_for(sport), message_id, listing_id)
+        await mark_message_closed(self.get_channel(channel_id), message_id, listing_id)
 
 
 class CloseView(discord.ui.View):
-    def __init__(self, listings, db_path, channel_for):
+    def __init__(self, listings, db_path, get_channel):
         # The default 180s left people who stepped away with a dropdown that
         # only answered "This interaction failed".
         super().__init__(timeout=900)
         # Set by the /close command so on_timeout can grey out the dropdown.
         self.message: Optional[Union[discord.Message, discord.WebhookMessage]] = None
-        self.add_item(CloseSelect(listings, db_path, channel_for))
+        self.add_item(CloseSelect(listings, db_path, get_channel))
 
     async def on_timeout(self):
         for item in self.children:
@@ -185,12 +186,12 @@ class CloseView(discord.ui.View):
 class ConfirmClearView(discord.ui.View):
     """Confirmation step for the admin-only /clear command."""
 
-    def __init__(self, db_path, channel_for, announce_channel, count):
+    def __init__(self, db_path, get_channel, announce_channel, count):
         super().__init__(timeout=120)
         self.db_path = db_path
-        # Posts are spread across the per-sport channels, so each one is
+        # Older posts are spread across the per-sport channels, so each one is
         # resolved from its own row; the announcement goes to the main channel.
-        self.channel_for = channel_for
+        self.get_channel = get_channel
         self.announce_channel = announce_channel
         self.count = count
         self.message: Optional[Union[discord.Message, discord.WebhookMessage]] = None
@@ -224,7 +225,7 @@ class ConfirmClearView(discord.ui.View):
         # After the reply, so a long run of edits cannot stall the interaction.
         updated = 0
         for row in rows:
-            channel = self.channel_for(row["sport"])
+            channel = self.get_channel(row["channel_id"])
             if await mark_message_closed(channel, row["message_id"], row["id"]):
                 updated += 1
         log.info("/clear closed %s listings, marked %s posts", len(rows), updated)
@@ -251,15 +252,14 @@ class ConfirmClearView(discord.ui.View):
 
 
 class CloseMatchedListingsView(discord.ui.View):
-    def __init__(self, db_path, listing_id, channel_for=None, sport=None, message_id=0):
+    def __init__(self, db_path, listing_id, channel=None, message_id=0):
         # Sent by DM once a day; stay usable until the next reminder replaces it.
         super().__init__(timeout=86400)
         self.db_path = db_path
         self.listing_id = listing_id
         # Needed so closing from the DM greys out the channel post too, the way
         # /close and /clear do.
-        self.channel_for = channel_for
-        self.sport = sport
+        self.channel = channel
         self.message_id = message_id
 
     async def _disable(self, interaction: discord.Interaction):
@@ -286,10 +286,7 @@ class CloseMatchedListingsView(discord.ui.View):
 
         # After the reply: fetching and editing the post is two HTTP calls and
         # must not race the interaction deadline.
-        if self.channel_for is not None:
-            await mark_message_closed(
-                self.channel_for(self.sport), self.message_id, self.listing_id
-            )
+        await mark_message_closed(self.channel, self.message_id, self.listing_id)
         await self._disable(interaction)
 
     @discord.ui.button(label="Dismiss", style=discord.ButtonStyle.grey)

@@ -100,7 +100,7 @@ HELP_COMMAND_FIELDS = [
         "/have",
         "Post tickets you have available.\n"
         "**Needed:** how many, and the month, day and year of the game.\n"
-        "**Sport:** skip it in a sport's channel, otherwise pick one.\n"
+        "**Sport:** skip it in a sport's channel; anywhere else I'll ask.\n"
         "**Notes:** put the game time, section, row or price here.",
     ),
     (
@@ -146,9 +146,8 @@ def build_help_embed() -> discord.Embed:
     embed.add_field(
         name="📍 Where things show up",
         value=(
-            "Your listing is posted to **the channel for its sport**. Men's and "
-            "women's basketball share one channel.\n"
-            "Match pings go to that same sport channel and tag both people.\n"
+            "Every listing is posted in **#ticket-exchange**, and match pings go "
+            "there too, tagging both people.\n"
             "`/listings`, `/mine`, `/close` and `/help` reply **privately**, "
             "visible only to you, in whatever channel you ran them."
         ),
@@ -162,7 +161,15 @@ def build_help_embed() -> discord.Embed:
             "The basketball channel covers two sports, so there you'll be asked "
             "which one you mean.\n"
             "You can run any command from anywhere. Picking a sport explicitly "
-            "always wins, and the listing still goes to that sport's channel."
+            "always wins."
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="📣 Get pinged for a sport",
+        value=(
+            "Tap a sport's button in the **sport notifications** message to be "
+            "pinged for its new listings and live scores. Tap again to stop."
         ),
         inline=False,
     )

@@ -8,7 +8,7 @@ A Discord bot for exchanging university sports tickets with other members of the
 
 The Ticket Exchange Bot lets you post tickets you have available or find tickets you're looking for. When a match is found between someone who has tickets and someone who wants them, the bot pings both of you automatically so you can connect.
 
-Listings are posted to the channel for their sport (both basketball listings share one channel), but you can run commands from anywhere in the server. `/listings`, `/mine`, and `/help` reply privately, visible only to you, in whatever channel you run them.
+All listings are posted in the ticket-exchange channel (`CHANNEL_ID`), and you can run commands from anywhere in the server. Members choose which sports ping them with the buttons `/rolepanel` posts; a new listing pings its sport's role. `/listings`, `/mine`, and `/help` reply privately, visible only to you, in whatever channel you run them.
 
 ---
 
@@ -87,6 +87,14 @@ Useful for resetting between seasons, or after testing.
 
 ---
 
+### `/rolepanel` — Post the sport notification buttons
+
+Run it in the channel where members should pick their roles. It creates any missing sport roles (Football, Men's Basketball, Women's Basketball, Volleyball, Baseball) and posts a message with one button per sport; tapping a button adds or removes that role. A new listing pings its sport's role, and live scores will too.
+
+The bot needs the **Manage Roles** permission, and its own role must sit **above** the sport roles in Server Settings → Roles (new roles are created at the bottom, so this is normally already true). The buttons keep working after restarts. Running it again posts a fresh panel and recreates any role that was deleted; delete the old panel message yourself.
+
+---
+
 ### `/reopen <listing_id>` — Put a closed listing back
 
 Restricted to server administrators and hidden from `/help`.
@@ -120,7 +128,7 @@ Every posted card ends with the command that matches it, so a reader knows the n
 
 Matching is on the calendar day. You never match with your own listings.
 
-When a match is found, the bot pings both users in that sport's channel (a match is always within one sport). From there, it's up to you to reach out and arrange the exchange.
+When a match is found, the bot pings both users in the ticket-exchange channel (a match is always within one sport). From there, it's up to you to reach out and arrange the exchange.
 
 Matched listings stay open and keep showing up in `/listings` and `/mine`. Once the exchange is actually done, run `/close` to remove your listing.
 
@@ -173,11 +181,11 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    BASEBALL_CHANNEL_ID=
    DEFAULT_SPORT_CHANNEL_ID=
    ```
-   The per-sport channel IDs decide where listings are posted. Any left blank fall back to `DEFAULT_SPORT_CHANNEL_ID`, and if that is blank too, to `CHANNEL_ID` — so an incomplete `.env` degrades to single-channel behaviour instead of failing to start. The resolved routing is printed at startup; check it with `journalctl -u ticket-bot`.
+   New listings always go to `CHANNEL_ID`. The per-sport channel IDs are used to fill in the sport when `/have` or `/want` is run inside that channel, and to find listing posts made before listings moved to one channel, so keep them set. Any left blank fall back to `DEFAULT_SPORT_CHANNEL_ID`, and if that is blank too, to `CHANNEL_ID` — so an incomplete `.env` degrades to single-channel behaviour instead of failing to start. The resolved routing is printed at startup; check it with `journalctl -u ticket-bot`.
 
-   `CHANNEL_ID` is still used for server-wide announcements, such as the notice `/clear` posts.
+   `CHANNEL_ID` is also used for server-wide announcements, such as the notice `/clear` posts.
 
-   The bot needs View Channel, Send Messages, Embed Links, and Read Message History **in every sport channel**, and members need Use Application Commands.
+   The bot needs View Channel, Send Messages, Embed Links, and Read Message History in the ticket-exchange channel (and in any sport channel that still has older listing posts), plus **Manage Roles** for `/rolepanel`. Members need Use Application Commands.
 
    In the [Developer Portal](https://discord.com/developers/applications), under **Bot → Privileged Gateway Intents**, turn on **Message Content Intent**. The bot uses it to notice a `/have` that a phone sent as plain text and reply with a hint. Without it the bot fails to log in.
 4. Install dependencies. This also downloads a matching Python (>=3.12) if the system Python is older:

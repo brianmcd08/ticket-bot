@@ -5,9 +5,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from cogs.listings import ListingsCog
+from cogs.roles import RolePanelView, RolesCog
 from cogs.tasks import TasksCog
 from config import settings
-from database import init_db
+from database import backfill_listing_channels, init_db
 
 log = logging.getLogger("ticketbot")
 
@@ -28,11 +29,22 @@ class TicketBot(commands.Bot):
 
     async def setup_hook(self):
         init_db(settings.db_path)
+        # Listings posted before each one recorded its channel live in their
+        # sport's channel. Run while the sport routing in .env still says
+        # where they went; a no-op once every card has a channel.
+        filled = backfill_listing_channels(
+            settings.db_path, settings.sport_channels.channel_id_for
+        )
+        if filled:
+            log.info("Recorded the channel for %s older listing card(s)", filled)
         await self.add_cog(
             ListingsCog(
                 self, settings.db_path, settings.channel_id, settings.sport_channels
             )
         )
+        await self.add_cog(RolesCog(self, settings.db_path))
+        # Re-attach the buttons on any role panel posted before a restart.
+        self.add_view(RolePanelView(settings.db_path))
         await self.add_cog(
             TasksCog(
                 self, settings.db_path, settings.channel_id, settings.sport_channels
