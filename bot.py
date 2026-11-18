@@ -70,6 +70,7 @@ class TicketBot(commands.Bot):
         )
         # Config gaps fall back silently rather than failing startup, so print
         # the resolved routing to make a missing .env entry visible.
+        print(f"Scores channel: {settings.scores_channel_id or '(not set)'}")
         print("Sport channel routing:")
         print(settings.sport_channels.describe())
 

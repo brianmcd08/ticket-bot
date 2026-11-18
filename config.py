@@ -30,6 +30,11 @@ class Config:
         self.channel_id = int(channel_str)
         self.token = token
 
+        # Where live scores are posted (scoreboard part 2). Optional: blank
+        # means scores are simply not posted.
+        scores_str = env.get("SCORES_CHANNEL_ID")
+        self.scores_channel_id = int(scores_str) if scores_str else None
+
         # Per-sport routing. Missing entries fall back rather than failing
         # startup; bot.py logs the resolved table so gaps stay visible.
         self.sport_channels = channels.build(

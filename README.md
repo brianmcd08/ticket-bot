@@ -174,6 +174,7 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    GUILD_ID=
    CHANNEL_ID=
    DB_PATH=tickets.db
+   SCORES_CHANNEL_ID=
 
    FOOTBALL_CHANNEL_ID=
    BASKETBALL_CHANNEL_ID=
@@ -182,6 +183,8 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    DEFAULT_SPORT_CHANNEL_ID=
    ```
    New listings always go to `CHANNEL_ID`. The per-sport channel IDs are used to fill in the sport when `/have` or `/want` is run inside that channel, and to find listing posts made before listings moved to one channel, so keep them set. Any left blank fall back to `DEFAULT_SPORT_CHANNEL_ID`, and if that is blank too, to `CHANNEL_ID` — so an incomplete `.env` degrades to single-channel behaviour instead of failing to start. The resolved routing is printed at startup; check it with `journalctl -u ticket-bot`.
+
+   `SCORES_CHANNEL_ID` is where live scores will be posted; leave it blank and no scores are posted.
 
    `CHANNEL_ID` is also used for server-wide announcements, such as the notice `/clear` posts.
 
