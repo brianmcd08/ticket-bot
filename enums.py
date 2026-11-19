@@ -14,7 +14,6 @@ class Sport(StrEnum):
     BASEBALL = "baseball"
     MENS_SOCCER = "mens_soccer"
     WOMENS_SOCCER = "womens_soccer"
-    WRESTLING = "wrestling"
 
 
 class ListingStatus(IntEnum):
@@ -32,7 +31,6 @@ SPORT_LABELS: dict[Sport, str] = {
     Sport.BASEBALL: "Baseball",
     Sport.MENS_SOCCER: "Men's Soccer",
     Sport.WOMENS_SOCCER: "Women's Soccer",
-    Sport.WRESTLING: "Wrestling",
 }
 
 # Shared by the role buttons and the score posts.
@@ -44,5 +42,4 @@ SPORT_EMOJI: dict[Sport, str] = {
     Sport.BASEBALL: "⚾",
     Sport.MENS_SOCCER: "⚽",
     Sport.WOMENS_SOCCER: "⚽",
-    Sport.WRESTLING: "🤼",
 }

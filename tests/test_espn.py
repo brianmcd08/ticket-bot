@@ -100,7 +100,7 @@ def test_pitt_team_ids_differ_for_soccer_and_baseball():
     assert pitt_team_id(Sport.WOMENS_SOCCER) == "20468"
 
 
-def test_wrestling_has_no_score_feed():
+def test_every_sport_has_a_score_feed():
     from espn import SPORT_PATHS
 
-    assert Sport.WRESTLING not in SPORT_PATHS
+    assert set(SPORT_PATHS) == set(Sport)

@@ -22,7 +22,7 @@ BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
 PITT_TEAM_ID = "221"
 EASTERN = ZoneInfo("America/New_York")
 
-# Sports with live scores. Wrestling isn't here: ESPN has no feed for it.
+# Sports with live scores (every sport the bot knows).
 SPORT_PATHS: dict[Sport, str] = {
     Sport.VOLLEYBALL: "volleyball/womens-college-volleyball",
     Sport.MENS_BASKETBALL: "basketball/mens-college-basketball",

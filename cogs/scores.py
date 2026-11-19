@@ -1,7 +1,7 @@
 """Live scores: one scoreboard message per game in #live-scores, kept current.
 
 Covers every sport in espn.SPORT_PATHS: football, volleyball, both
-basketballs, baseball and both soccers. Wrestling has no ESPN feed.
+basketballs, baseball and both soccers.
 
 Every minute the loop looks at the team's cached schedule. Only a match that
 starts soon or started in the last few hours is fetched from ESPN, so on a
