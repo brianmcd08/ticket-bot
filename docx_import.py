@@ -12,12 +12,15 @@ Pure apart from mammoth: no Discord, no network. Fully unit tested.
 
 import io
 import re
+import zipfile
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import PurePath
 from typing import Any, Optional
 
 import mammoth
+
+from docx_charts import MARKER_RE, extract_charts, render_chart
 
 IMAGE_REF = "docx-image:"
 # Formats Discord shows inline. Word can also hold EMF/WMF drawings, which
@@ -52,6 +55,9 @@ class ImportedArticle:
     doc: Node
     pictures: list[Picture] = field(default_factory=list)
     skipped_pictures: int = 0  # drawings Discord can't show
+    charts_drawn: int = 0  # charts redrawn from their data
+    unsupported_charts: int = 0  # chart types we can't draw
+    smartart: int = 0  # SmartArt graphics, which can't come through
 
 
 class UnreadableDocument(Exception):
@@ -279,6 +285,29 @@ def import_docx(data: bytes, filename: str) -> ImportedArticle:
     pictures: list[Picture] = []
     skipped = 0
 
+    # Charts: swap each for a marker, draw it, and remember which picture
+    # it became; the markers turn into pictures after mammoth runs.
+    try:
+        extracted = extract_charts(data)
+    except zipfile.BadZipFile as error:
+        raise UnreadableDocument(str(error)) from error
+    chart_pictures: dict[int, Optional[int]] = {}
+    unsupported = 0
+    for number, chart in enumerate(extracted.charts):
+        png = None
+        if chart is not None:
+            try:
+                png = render_chart(chart)
+            except Exception:
+                png = None
+        if png is None:
+            unsupported += 1
+            chart_pictures[number] = None
+        else:
+            pictures.append(Picture(png, "image/png"))
+            chart_pictures[number] = len(pictures) - 1
+    data = extracted.docx
+
     def keep_picture(image) -> dict:
         nonlocal skipped
         content_type = (image.content_type or "").lower()
@@ -297,8 +326,21 @@ def import_docx(data: bytes, filename: str) -> ImportedArticle:
         )
     except Exception as error:  # a corrupt file, or not really a .docx
         raise UnreadableDocument(str(error)) from error
-    title, doc = html_to_article(result.value, filename)
-    return ImportedArticle(title=title, doc=doc, pictures=pictures, skipped_pictures=skipped)
+    def chart_image(match: re.Match) -> str:
+        index = chart_pictures.get(int(match.group(1)))
+        return f'<img src="{IMAGE_REF}{index}" />' if index is not None else ""
+
+    html = MARKER_RE.sub(chart_image, result.value)
+    title, doc = html_to_article(html, filename)
+    return ImportedArticle(
+        title=title,
+        doc=doc,
+        pictures=pictures,
+        skipped_pictures=skipped,
+        charts_drawn=sum(1 for v in chart_pictures.values() if v is not None),
+        unsupported_charts=unsupported,
+        smartart=extracted.smartart,
+    )
 
 
 def picture_index(src: Optional[str]) -> Optional[int]:

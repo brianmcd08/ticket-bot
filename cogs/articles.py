@@ -36,7 +36,7 @@ from database import (
     mark_article_removed,
     update_article,
 )
-from docx_import import SHOWABLE, Picture, UnreadableDocument, import_docx
+from docx_import import SHOWABLE, ImportedArticle, Picture, UnreadableDocument, import_docx
 
 log = logging.getLogger("ticketbot")
 
@@ -89,6 +89,36 @@ async def _delete(*messages: Optional[discord.Message]) -> None:
             pass
         except discord.Forbidden:
             log.warning("Can't delete messages in the submit channel; give the bot Manage Messages there")
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'s' if n != 1 else ''}"
+
+
+PASTE_AS_PICTURE = (
+    "In Word, right-click it → **Copy**, then **Paste Special → Picture**, "
+    "save, and drop the file again."
+)
+
+
+def notes(imported: ImportedArticle) -> list[str]:
+    """What the writer should know about pictures, charts and SmartArt."""
+    lines = []
+    if imported.charts_drawn:
+        lines.append(f"📊 {_plural(imported.charts_drawn, 'chart')} redrawn from your data, in place.")
+    if imported.unsupported_charts:
+        lines.append(
+            f"⚠️ {_plural(imported.unsupported_charts, 'chart')} couldn't be drawn (that chart "
+            f"type isn't supported). {PASTE_AS_PICTURE}"
+        )
+    if imported.smartart:
+        lines.append(f"⚠️ {_plural(imported.smartart, 'SmartArt graphic')} can't come through. {PASTE_AS_PICTURE}")
+    if imported.skipped_pictures:
+        lines.append(
+            f"⚠️ {_plural(imported.skipped_pictures, 'drawing')} couldn't be used (Discord can't "
+            "show that kind). Use a normal picture (PNG or JPG) instead."
+        )
+    return lines
 
 
 def matching_article(articles: list[Article], title: str) -> Optional[Article]:
@@ -200,9 +230,7 @@ class ArticlesCog(commands.Cog):
             cover=cover,
             tags=list(target.tags) if target else [],
         )
-        panel = ArticlePanel(
-            self, forum, draft, message, published, target, imported.skipped_pictures, word_count(imported.doc)
-        )
+        panel = ArticlePanel(self, forum, draft, message, published, target, imported, word_count(imported.doc))
         panel.message = await message.reply(embed=panel.embed(), view=panel, mention_author=False)
 
 
@@ -284,7 +312,7 @@ class ArticlePanel(discord.ui.View):
         source: discord.Message,
         published: list[Article],
         target: Optional[Article],
-        skipped_pictures: int,
+        imported: ImportedArticle,
         words: int,
     ):
         super().__init__(timeout=PANEL_TIMEOUT)
@@ -295,7 +323,7 @@ class ArticlePanel(discord.ui.View):
         self.author_id = source.author.id
         self.published = published
         self.article: Optional[Article] = None
-        self.skipped = skipped_pictures
+        self.imported = imported
         self.words = words
         self.message: Optional[discord.Message] = None
         self.busy = False
@@ -330,11 +358,7 @@ class ArticlePanel(discord.ui.View):
         ]
         names = [t.name for t in (self.forum.get_tag(i) for i in d.tags) if t]
         lines.append(f"🏷️ Topics: {', '.join(names) if names else 'none picked'}")
-        if self.skipped:
-            lines.append(
-                f"⚠️ {self.skipped} drawing{'s' if self.skipped != 1 else ''} couldn't be used "
-                "(Discord can't show that kind). Use a normal picture (PNG or JPG) instead."
-            )
+        lines.extend(notes(self.imported))
         if self.article:
             lines.append(
                 f"\n🔄 This will **update** your post: "
