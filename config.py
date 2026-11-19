@@ -38,6 +38,13 @@ class Config:
         # testing live scores on the dev server; blank (None) means Pitt.
         self.scores_team_id = env.get("SCORES_TEAM_ID") or None
 
+        # Articles: Word files dropped in the submit channel are posted to the
+        # news forum. Optional: leave either blank and articles are off.
+        submit_str = env.get("ARTICLE_SUBMIT_CHANNEL_ID")
+        forum_str = env.get("NEWS_FORUM_CHANNEL_ID")
+        self.article_submit_channel_id = int(submit_str) if submit_str else None
+        self.news_forum_channel_id = int(forum_str) if forum_str else None
+
         # Per-sport routing. Missing entries fall back rather than failing
         # startup; bot.py logs the resolved table so gaps stay visible.
         self.sport_channels = channels.build(

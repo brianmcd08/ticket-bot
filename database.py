@@ -85,6 +85,30 @@ def init_db(db_path):
                     role_id INTEGER NOT NULL
                 )
             """)
+            # Articles posted to the news forum from Word files. message_ids
+            # and tags are JSON lists. status: published | removed (a mod
+            # deleted the post, so it must never be re-posted).
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS articles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    author_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    tags TEXT NOT NULL DEFAULT '[]',
+                    thread_id INTEGER NOT NULL,
+                    message_ids TEXT NOT NULL DEFAULT '[]',
+                    status TEXT NOT NULL DEFAULT 'published',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            # The bot's "Published" replies in the submit channel. Replying to
+            # any of them with a new Word file updates that article.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS article_panels (
+                    message_id INTEGER PRIMARY KEY,
+                    article_id INTEGER NOT NULL
+                )
+            """)
             # One row per ESPN match the bot has posted about. Lets a restart
             # mid-match keep editing the same scoreboard message and never send
             # the start or final post twice.
@@ -251,6 +275,94 @@ def save_sport_role(db_path, sport, role_id):
                 """,
                 (str(sport), role_id),
             )
+
+
+@dataclass
+class Article:
+    id: int
+    author_id: int
+    title: str
+    tags: list[int]
+    thread_id: int
+    message_ids: list[int]
+    status: str
+
+
+def _article(row) -> Article:
+    import json
+
+    return Article(
+        id=row["id"],
+        author_id=row["author_id"],
+        title=row["title"],
+        tags=json.loads(row["tags"]),
+        thread_id=row["thread_id"],
+        message_ids=json.loads(row["message_ids"]),
+        status=row["status"],
+    )
+
+
+def add_article(db_path, author_id, title, tags, thread_id, message_ids) -> int:
+    import json
+
+    now = datetime.now().isoformat()
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO articles
+                    (author_id, title, tags, thread_id, message_ids, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (author_id, title, json.dumps(tags), thread_id, json.dumps(message_ids), now, now),
+            )
+            return cursor.lastrowid or 0
+
+
+def update_article(db_path, article_id, title, tags, message_ids):
+    import json
+
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                """
+                UPDATE articles SET title = ?, tags = ?, message_ids = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (title, json.dumps(tags), json.dumps(message_ids), datetime.now().isoformat(), article_id),
+            )
+
+
+def mark_article_removed(db_path, article_id):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                "UPDATE articles SET status = 'removed', updated_at = ? WHERE id = ?",
+                (datetime.now().isoformat(), article_id),
+            )
+
+
+def add_article_panel(db_path, message_id, article_id):
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        with conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO article_panels (message_id, article_id) VALUES (?, ?)",
+                (message_id, article_id),
+            )
+
+
+def article_for_panel(db_path, message_id) -> Optional[Article]:
+    with closing(sqlite3.connect(database=db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT a.* FROM articles a
+            JOIN article_panels p ON p.article_id = a.id
+            WHERE p.message_id = ?
+            """,
+            (message_id,),
+        ).fetchone()
+    return _article(row) if row else None
 
 
 def update_message_id(db_path, listing_id, message_id):

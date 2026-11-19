@@ -4,6 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from cogs.articles import ArticlesCog, ExpiredArticlePanel
 from cogs.listings import ListingsCog
 from cogs.roles import RolePanelView, RolesCog
 from cogs.scores import ScoresCog
@@ -46,9 +47,20 @@ class TicketBot(commands.Bot):
         await self.add_cog(RolesCog(self, settings.db_path))
         # Re-attach the buttons on any role panel posted before a restart.
         self.add_view(RolePanelView(settings.db_path))
+        # Article replies don't survive a restart; this explains that
+        # instead of Discord's "didn't respond in time".
+        self.add_view(ExpiredArticlePanel())
         await self.add_cog(
             TasksCog(
                 self, settings.db_path, settings.channel_id, settings.sport_channels
+            )
+        )
+        await self.add_cog(
+            ArticlesCog(
+                self,
+                settings.db_path,
+                settings.article_submit_channel_id,
+                settings.news_forum_channel_id,
             )
         )
         await self.add_cog(
@@ -79,6 +91,10 @@ class TicketBot(commands.Bot):
         print(
             f"Scores channel: {settings.scores_channel_id or '(not set)'} "
             f"(team {settings.scores_team_id or 'Pitt'})"
+        )
+        print(
+            f"Articles: {settings.article_submit_channel_id or '(not set)'} -> "
+            f"{settings.news_forum_channel_id or '(not set)'}"
         )
         print("Sport channel routing:")
         print(settings.sport_channels.describe())

@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "discord-py>=2.7.1",
+    "mammoth>=1.13.0",
     "pytest>=9.0.3",
     "python-dotenv>=1.2.2",
 ]
@@ -21,3 +22,8 @@ typeCheckingMode = "basic"
 pythonVersion = "3.12"
 venvPath = "."
 venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "python-docx>=1.2.0",
+]
