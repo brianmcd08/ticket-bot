@@ -25,6 +25,16 @@ EASTERN = ZoneInfo("America/New_York")
 # Adding a sport is one entry here (and a channel/role in config).
 SPORT_PATHS: dict[Sport, str] = {
     Sport.VOLLEYBALL: "volleyball/womens-college-volleyball",
+    Sport.MENS_BASKETBALL: "basketball/mens-college-basketball",
+    Sport.WOMENS_BASKETBALL: "basketball/womens-college-basketball",
+}
+
+# Extra scoreboard filter. The basketball scoreboard shows only a handful of
+# featured games unless asked for all of Division I (group 50), which would
+# leave Pitt out; volleyball returns nothing if given that filter.
+SCOREBOARD_GROUPS: dict[Sport, str] = {
+    Sport.MENS_BASKETBALL: "50",
+    Sport.WOMENS_BASKETBALL: "50",
 }
 
 TIMEOUT = aiohttp.ClientTimeout(total=15)
@@ -41,8 +51,8 @@ class Team:
     id: str
     name: str  # short display name, e.g. "Pitt"
     abbreviation: str
-    score: Optional[int]  # sets won in volleyball; None before the match
-    periods: tuple[int, ...]  # points per set (or per quarter/half)
+    score: Optional[int]  # sets won in volleyball, points otherwise; None before
+    periods: tuple[int, ...]  # points per set, half or quarter (then overtimes)
 
 
 @dataclass(frozen=True)
@@ -55,6 +65,8 @@ class Game:
     broadcast: Optional[str]
     home: Team
     away: Team
+    sport: Sport = Sport.VOLLEYBALL
+    neutral: bool = False  # neither team at home, e.g. a tournament
 
     def has_team(self, team_id: str) -> bool:
         return team_id in (self.home.id, self.away.id)
@@ -123,7 +135,7 @@ def parse_start(raw: str) -> datetime:
     return datetime.fromisoformat(raw.replace("Z", "+00:00"))
 
 
-def parse_event(event: dict) -> Game:
+def parse_event(event: dict, sport: Sport = Sport.VOLLEYBALL) -> Game:
     competition = event["competitions"][0]
     status = competition.get("status") or event.get("status") or {}
     status_type = status.get("type", {})
@@ -140,11 +152,13 @@ def parse_event(event: dict) -> Game:
         broadcast=_parse_broadcast(competition),
         home=home,
         away=away,
+        sport=sport,
+        neutral=bool(competition.get("neutralSite")),
     )
 
 
-def parse_events(payload: dict) -> list[Game]:
-    return [parse_event(e) for e in payload.get("events", [])]
+def parse_events(payload: dict, sport: Sport = Sport.VOLLEYBALL) -> list[Game]:
+    return [parse_event(e, sport) for e in payload.get("events", [])]
 
 
 # ---------- fetching ----------
@@ -157,7 +171,9 @@ def schedule_url(sport: Sport, team_id: str) -> str:
 def scoreboard_url(sport: Sport, day: datetime) -> str:
     """ESPN files a match under its US Eastern date."""
     date = day.astimezone(EASTERN).strftime("%Y%m%d")
-    return f"{BASE_URL}/{SPORT_PATHS[sport]}/scoreboard?dates={date}&limit=500"
+    url = f"{BASE_URL}/{SPORT_PATHS[sport]}/scoreboard?dates={date}&limit=500"
+    group = SCOREBOARD_GROUPS.get(sport)
+    return f"{url}&groups={group}" if group else url
 
 
 async def _get_json(session: aiohttp.ClientSession, url: str) -> dict:
@@ -169,12 +185,12 @@ async def _get_json(session: aiohttp.ClientSession, url: str) -> dict:
 async def fetch_schedule(
     session: aiohttp.ClientSession, sport: Sport, team_id: str
 ) -> list[Game]:
-    return parse_events(await _get_json(session, schedule_url(sport, team_id)))
+    return parse_events(await _get_json(session, schedule_url(sport, team_id)), sport)
 
 
 async def fetch_game(
     session: aiohttp.ClientSession, sport: Sport, event_id: str, start: datetime
 ) -> Optional[Game]:
     """Live state of one match, from the scoreboard for its date."""
-    games = parse_events(await _get_json(session, scoreboard_url(sport, start)))
+    games = parse_events(await _get_json(session, scoreboard_url(sport, start)), sport)
     return next((g for g in games if g.event_id == event_id), None)

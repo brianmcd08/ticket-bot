@@ -12,17 +12,9 @@ from discord import app_commands
 from discord.ext import commands
 
 from database import get_sport_role, get_sport_roles, save_sport_role
-from enums import SPORT_LABELS, Sport
+from enums import SPORT_EMOJI, SPORT_LABELS, Sport
 
 log = logging.getLogger("ticketbot")
-
-SPORT_EMOJI: dict[Sport, str] = {
-    Sport.FOOTBALL: "🏈",
-    Sport.MENS_BASKETBALL: "🏀",
-    Sport.WOMENS_BASKETBALL: "🏀",
-    Sport.VOLLEYBALL: "🏐",
-    Sport.BASEBALL: "⚾",
-}
 
 # Stable across restarts, so buttons on an old panel keep working.
 CUSTOM_ID_PREFIX = "sportrole:"

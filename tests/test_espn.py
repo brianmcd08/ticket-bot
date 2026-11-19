@@ -79,3 +79,13 @@ def test_scoreboard_url_uses_eastern_date():
     # 01:00 UTC on the 16th is 8 PM Eastern on the 15th
     start = datetime(2026, 11, 16, 1, 0, tzinfo=timezone.utc)
     assert "dates=20261115" in scoreboard_url(Sport.VOLLEYBALL, start)
+
+
+def test_basketball_scoreboard_asks_for_all_of_division_one():
+    from espn import scoreboard_url
+
+    day = datetime(2026, 11, 18, 0, 0, tzinfo=timezone.utc)  # 7pm Eastern on the 17th
+    assert scoreboard_url(Sport.MENS_BASKETBALL, day).endswith(
+        "scoreboard?dates=20261117&limit=500&groups=50"
+    )
+    assert scoreboard_url(Sport.VOLLEYBALL, day).endswith("dates=20261117&limit=500")

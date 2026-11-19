@@ -28,3 +28,12 @@ SPORT_LABELS: dict[Sport, str] = {
     Sport.WOMENS_BASKETBALL: "Women's Basketball",
     Sport.BASEBALL: "Baseball",
 }
+
+# Shared by the role buttons and the score posts.
+SPORT_EMOJI: dict[Sport, str] = {
+    Sport.FOOTBALL: "🏈",
+    Sport.MENS_BASKETBALL: "🏀",
+    Sport.WOMENS_BASKETBALL: "🏀",
+    Sport.VOLLEYBALL: "🏐",
+    Sport.BASEBALL: "⚾",
+}

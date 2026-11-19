@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from enums import Sport
 from espn import PITT_TEAM_ID, Game, GameState, Team
 from scores_format import (
     final_message,
@@ -16,11 +17,14 @@ def make_game(
     pitt_home=True,
     pitt=(2, (25, 22, 14)),
     opp=(1, (20, 25, 11)),
-    broadcast="ESPN",
+    broadcast: str | None = "ESPN",
     detail="3rd Set",
+    sport=Sport.VOLLEYBALL,
+    neutral=False,
+    opp_name=("Louisville", "LOU"),
 ):
     pitt_team = Team(PITT_TEAM_ID, "Pitt", "PITT", pitt[0], pitt[1])
-    opp_team = Team("97", "Louisville", "LOU", opp[0], opp[1])
+    opp_team = Team("97", opp_name[0], opp_name[1], opp[0], opp[1])
     home, away = (pitt_team, opp_team) if pitt_home else (opp_team, pitt_team)
     return Game(
         event_id="1",
@@ -31,6 +35,8 @@ def make_game(
         broadcast=broadcast,
         home=home,
         away=away,
+        sport=sport,
+        neutral=neutral,
     )
 
 
@@ -91,3 +97,59 @@ def test_final_message_pitt_loses_sets_from_winner_side():
     assert final_message(game, PITT_TEAM_ID, None) == (
         "🏐 Final: Louisville def. Pitt 3-2 (21-25, 25-20, 23-25, 25-22, 15-13)"
     )
+
+
+# ---------- basketball ----------
+
+
+def hoops(sport=Sport.MENS_BASKETBALL, pitt=(81, (38, 43)), opp=(61, (30, 31)), **kw):
+    kw.setdefault("state", GameState.FINAL)
+    kw.setdefault("detail", "Final")
+    return make_game(sport=sport, pitt=pitt, opp=opp, opp_name=("Villanova", "VILL"), **kw)
+
+
+def test_mens_table_has_halves_then_total():
+    assert score_table(hoops()) == (
+        "       1   2   T\n"
+        "VILL  30  31  61\n"
+        "PITT  38  43  81"
+    )
+
+
+def test_womens_table_has_quarters_and_labels_overtime():
+    game = hoops(
+        Sport.WOMENS_BASKETBALL,
+        pitt=(80, (20, 20, 15, 15, 10)),
+        opp=(75, (15, 15, 20, 20, 5)),
+    )
+    assert score_table(game).splitlines()[0] == "       1   2   3   4  OT   T"
+
+
+def test_double_overtime_label():
+    game = hoops(pitt=(90, (35, 35, 10, 10)), opp=(85, (30, 40, 10, 5)))
+    assert score_table(game).splitlines()[0] == "       1   2  OT 2OT   T"
+
+
+def test_basketball_embed_uses_basketball_emoji():
+    assert scoreboard_embed(hoops()).title == "🏀 Villanova at Pitt"
+
+
+def test_basketball_final_is_just_the_score():
+    assert final_message(hoops(), PITT_TEAM_ID, ROLE) == (
+        "<@&555> 🏀 Final: Pitt def. Villanova 81-61"
+    )
+
+
+def test_basketball_final_notes_overtime():
+    game = hoops(pitt=(70, (30, 30, 10)), opp=(72, (35, 25, 12)))
+    assert final_message(game, PITT_TEAM_ID, None) == (
+        "🏀 Final: Villanova def. Pitt 72-70 (OT)"
+    )
+
+
+def test_neutral_site_says_vs_even_when_listed_away():
+    game = hoops(pitt_home=False, neutral=True, state=GameState.LIVE)
+    assert start_message(game, PITT_TEAM_ID, None, "L").startswith(
+        "🏀 Pitt vs Villanova is underway"
+    )
+    assert scoreboard_embed(game).title == "🏀 Pitt vs Villanova"

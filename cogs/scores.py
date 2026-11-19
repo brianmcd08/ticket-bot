@@ -1,4 +1,6 @@
-"""Live scores: one scoreboard message per match in #live-scores, kept current.
+"""Live scores: one scoreboard message per game in #live-scores, kept current.
+
+Covers every sport in espn.SPORT_PATHS (volleyball and both basketballs).
 
 Every minute the loop looks at the team's cached schedule. Only a match that
 starts soon or started in the last few hours is fetched from ESPN, so on a
@@ -44,7 +46,7 @@ LEAD = timedelta(minutes=15)
 # drops out instead of being polled forever.
 WINDOW = timedelta(hours=5)
 
-SPORTS: tuple[Sport, ...] = (Sport.VOLLEYBALL,)
+SPORTS: tuple[Sport, ...] = tuple(espn.SPORT_PATHS)
 
 
 def active_games(schedule: list[Game], now: datetime) -> list[Game]:
