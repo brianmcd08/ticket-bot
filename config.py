@@ -3,6 +3,7 @@ import os
 from dotenv import dotenv_values
 
 import channels
+import espn
 
 
 class Config:
@@ -34,6 +35,9 @@ class Config:
         # means scores are simply not posted.
         scores_str = env.get("SCORES_CHANNEL_ID")
         self.scores_channel_id = int(scores_str) if scores_str else None
+        # Whose matches to follow, by ESPN team id. Blank means Pitt; on the
+        # dev server, set it to any team playing today to test live scores.
+        self.scores_team_id = env.get("SCORES_TEAM_ID") or espn.PITT_TEAM_ID
 
         # Per-sport routing. Missing entries fall back rather than failing
         # startup; bot.py logs the resolved table so gaps stay visible.

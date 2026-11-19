@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from cogs.listings import ListingsCog
 from cogs.roles import RolePanelView, RolesCog
+from cogs.scores import ScoresCog
 from cogs.tasks import TasksCog
 from config import settings
 from database import backfill_listing_channels, init_db
@@ -50,6 +51,11 @@ class TicketBot(commands.Bot):
                 self, settings.db_path, settings.channel_id, settings.sport_channels
             )
         )
+        await self.add_cog(
+            ScoresCog(
+                self, settings.db_path, settings.scores_channel_id, settings.scores_team_id
+            )
+        )
         self.tree.on_error = on_app_command_error
         self.tree.copy_global_to(guild=discord.Object(id=settings.guild_id))
         self.synced = await self.tree.sync(guild=discord.Object(id=settings.guild_id))
@@ -70,7 +76,10 @@ class TicketBot(commands.Bot):
         )
         # Config gaps fall back silently rather than failing startup, so print
         # the resolved routing to make a missing .env entry visible.
-        print(f"Scores channel: {settings.scores_channel_id or '(not set)'}")
+        print(
+            f"Scores channel: {settings.scores_channel_id or '(not set)'} "
+            f"(team {settings.scores_team_id})"
+        )
         print("Sport channel routing:")
         print(settings.sport_channels.describe())
 
