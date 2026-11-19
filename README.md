@@ -122,15 +122,15 @@ It edits posts in place and nothing else: no announcement, no pings, no repostin
 Content creators can publish blog-style articles to the news forum straight from Word.
 
 1. In the submit channel, send a message with the **Word file (.docx)** attached. Attach a picture in the same message to use it as the forum card picture.
-2. The bot replies with the title it found, a topic dropdown, and **Preview**, **Change title** and **Publish** buttons. Only the writer can use them, and the preview is visible only to them.
-3. **Publish** posts the article in the news forum under the writer's name and picture. Headings, bold, italics, underline, lists, links, quotes and pictures come through; tables become a lined-up block; long articles are split into several messages.
-4. To update an article, **reply to the bot's "Published" message** with the new Word file and press **Update post**. The post is edited in place, so replies stay.
+2. The bot replies with the title it found, a topic dropdown, and **Preview**, **Change title** and **Publish** buttons. Only the writer can use them, and the preview is visible only to them. If the writer already has published articles, a first menu picks **New article** or **Update:** one of them (an article with the same title is picked automatically).
+3. **Publish** posts the article in the news forum under the writer's name and picture, shows the writer the link privately, and deletes the file message and the bot's reply so the channel stays clean. Headings, bold, italics, underline, lists, links, quotes and pictures come through; tables become a lined-up block; long articles are split into several messages.
+4. To update an article, drop the new Word file in the submit channel, pick **Update: …** in the first menu, and press **Update post**. The post is edited in place, so replies stay.
 
 The title comes from the document's *Title* style, or a heading at the very top, or else the file name; **Change title** fixes it. Google Docs users download the doc as **Microsoft Word (.docx)** first.
 
 Moderators remove an article by deleting its post in the forum. The bot never re-posts it: updates to a removed article are refused.
 
-Setup (admin): create a private submit channel that only the content-creator role (and the bot) can see, set `ARTICLE_SUBMIT_CHANNEL_ID` and `NEWS_FORUM_CHANNEL_ID`, and in the news forum give the bot **View Channel, Create Posts, Send Messages in Posts, Attach Files, Embed Links, Manage Webhooks** and **Manage Posts** (forums call Send Messages "Create Posts" and Manage Threads "Manage Posts"). The bot creates its own "Articles" webhook the first time it publishes.
+Setup (admin): create a private submit channel that only the content-creator role (and the bot) can see, set `ARTICLE_SUBMIT_CHANNEL_ID` and `NEWS_FORUM_CHANNEL_ID`, and in the news forum give the bot **Manage Messages** in the submit channel (to clean up), and **View Channel, Create Posts, Send Messages in Posts, Attach Files, Embed Links, Manage Webhooks** and **Manage Posts** (forums call Send Messages "Create Posts" and Manage Threads "Manage Posts"). The bot creates its own "Articles" webhook the first time it publishes.
 
 ## How Matching Works
 

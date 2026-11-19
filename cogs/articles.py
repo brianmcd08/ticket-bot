@@ -3,11 +3,16 @@ bot posts it to the news forum.
 
   1. A writer posts a message in the submit channel with a .docx attached,
      plus (optionally) a picture to use on the forum card.
-  2. The bot replies with the title, a topic dropdown, and Preview /
-     Change title / Publish buttons that only that writer can use.
-  3. Publish posts the article in the news forum under the writer's name.
-  4. To update it, the writer replies to the bot's "Published" message with
-     the new Word file; the same buttons appear, with "Update post".
+  2. The bot replies with the title, a "New article / Update: ..." choice,
+     a topic dropdown, and Preview / Change title / Publish buttons that only
+     that writer can use.
+  3. Publish posts (or updates) the article in the news forum under the
+     writer's name. The writer gets the link privately, and the bot deletes
+     both the file message and its own reply.
+
+The channel cleans up after itself so writers never wade through old
+submissions: finished, cancelled and expired submissions are deleted, and
+hints vanish after a few minutes. (The bot needs Manage Messages there.)
 
 Who can submit is decided by who can post in the submit channel (make it
 private to the content-creator role). Mods take an article down by deleting
@@ -27,8 +32,7 @@ from article_render import render_article, word_count
 from database import (
     Article,
     add_article,
-    add_article_panel,
-    article_for_panel,
+    articles_by_author,
     mark_article_removed,
     update_article,
 )
@@ -39,8 +43,11 @@ log = logging.getLogger("ticketbot")
 MAX_FILE = 10 * 1024 * 1024
 PANEL_TIMEOUT = 30 * 60
 PREVIEW_MAX = 10
+NOTICE_SECONDS = 5 * 60  # hints and errors in the channel vanish after this
+UPDATE_CHOICES = 24  # Discord allows 25 options; one is "New article"
 NEWS_GREEN = discord.Color.green()
 OTHER_FORMATS = (".doc", ".pdf", ".pages", ".odt", ".rtf", ".txt", ".gdoc")
+NEW = "new"
 
 SAVE_AS_HINT = (
     "I can only read Word files that end in **.docx**. In Word, choose "
@@ -56,10 +63,39 @@ REMOVED = (
     "A moderator removed this article from the news forum, so it can't be "
     "updated or posted again. Talk to a moderator if you think that's a mistake."
 )
+EXPIRED = "These buttons stopped working because the bot restarted. Please drop the Word file again."
+PANEL_IDS = (
+    "article:target",
+    "article:tags",
+    "article:preview",
+    "article:title",
+    "article:publish",
+    "article:cancel",
+)
 
 
 def _thread_url(guild_id: int, thread_id: int) -> str:
     return f"https://discord.com/channels/{guild_id}/{thread_id}"
+
+
+async def _delete(*messages: Optional[discord.Message]) -> None:
+    """Delete messages, ignoring ones already gone or not ours to delete."""
+    for message in messages:
+        if message is None:
+            continue
+        try:
+            await message.delete()
+        except discord.NotFound:
+            pass
+        except discord.Forbidden:
+            log.warning("Can't delete messages in the submit channel; give the bot Manage Messages there")
+
+
+def matching_article(articles: list[Article], title: str) -> Optional[Article]:
+    """The writer's published article with this title, if any: a re-upload
+    of the same document is most likely an update."""
+    wanted = " ".join(title.split()).casefold()
+    return next((a for a in articles if " ".join(a.title.split()).casefold() == wanted), None)
 
 
 class ArticlesCog(commands.Cog):
@@ -86,6 +122,15 @@ class ArticlesCog(commands.Cog):
             return None
         return channel if isinstance(channel, discord.Thread) else None
 
+    async def notice(self, message: discord.Message, text: str) -> None:
+        """Reply in the channel, then remove the reply and the writer's
+        message after a few minutes so the channel stays clean."""
+        await message.reply(text, mention_author=False, delete_after=NOTICE_SECONDS)
+        try:
+            await message.delete(delay=NOTICE_SECONDS)
+        except discord.HTTPException:
+            pass
+
     # ---------- a file arrives ----------
 
     @commands.Cog.listener()
@@ -100,59 +145,42 @@ class ArticlesCog(commands.Cog):
         word = next((a for a in message.attachments if a.filename.lower().endswith(".docx")), None)
         if word is None:
             if any(a.filename.lower().endswith(OTHER_FORMATS) for a in message.attachments):
-                await message.reply(SAVE_AS_HINT, mention_author=False)
+                await self.notice(message, SAVE_AS_HINT)
             return
         try:
             await self.handle_submission(message, word)
         except Exception:
             log.exception("Article submission failed (message %s)", message.id)
-            await message.reply(
-                "Something went wrong reading that file. It has been logged; please try again.",
-                mention_author=False,
+            await self.notice(
+                message, "Something went wrong reading that file. It has been logged; please try again."
             )
 
     async def handle_submission(self, message: discord.Message, word: discord.Attachment):
         forum = self.forum()
         if forum is None:
-            await message.reply(
-                "Articles aren't set up yet: I can't find the news forum. Ask an admin.",
-                mention_author=False,
-            )
+            await self.notice(message, "Articles aren't set up yet: I can't find the news forum. Ask an admin.")
             return
         if word.size > MAX_FILE:
-            await message.reply(
+            await self.notice(
+                message,
                 "That Word file is over 10 MB, usually because of large pictures. "
                 "In Word, use **Compress Pictures**, save, and try again.",
-                mention_author=False,
             )
             return
-
-        # Replying to a "Published" message means: update that article.
-        article: Optional[Article] = None
-        if message.reference and message.reference.message_id:
-            article = article_for_panel(self.db_path, message.reference.message_id)
-            if article and article.author_id != message.author.id:
-                await message.reply(
-                    "Only the writer of that article can update it.", mention_author=False
-                )
-                return
-            if article and article.status == "removed":
-                await message.reply(REMOVED, mention_author=False)
-                return
 
         try:
             imported = await asyncio.to_thread(import_docx, await word.read(), word.filename)
         except UnreadableDocument:
-            await message.reply(
+            await self.notice(
+                message,
                 "I couldn't read that Word file. Open it in Word, choose **File → Save As → "
                 "Word Document (.docx)**, and drop the new file here.",
-                mention_author=False,
             )
             return
 
         parts = render_article(imported.doc)
         if not parts:
-            await message.reply("That document looks empty, so there's nothing to post.", mention_author=False)
+            await self.notice(message, "That document looks empty, so there's nothing to post.")
             return
 
         cover = None
@@ -163,15 +191,45 @@ class ArticlesCog(commands.Cog):
         if picture is not None:
             cover = Picture(await picture.read(), (picture.content_type or "").split(";")[0])
 
+        published = articles_by_author(self.db_path, message.author.id)[:UPDATE_CHOICES]
+        target = matching_article(published, imported.title)
         draft = Draft(
             title=imported.title,
             parts=parts,
             pictures=imported.pictures,
             cover=cover,
-            tags=list(article.tags) if article else [],
+            tags=list(target.tags) if target else [],
         )
-        panel = ArticlePanel(self, forum, draft, message.author.id, article, imported.skipped_pictures, word_count(imported.doc))
+        panel = ArticlePanel(
+            self, forum, draft, message, published, target, imported.skipped_pictures, word_count(imported.doc)
+        )
         panel.message = await message.reply(embed=panel.embed(), view=panel, mention_author=False)
+
+
+class TargetSelect(discord.ui.Select["ArticlePanel"]):
+    """New article, or which published article this file updates."""
+
+    def __init__(self, published: list[Article], target: Optional[Article]):
+        options = [discord.SelectOption(label="New article", value=NEW, emoji="📝", default=target is None)]
+        options += [
+            discord.SelectOption(
+                label=f"Update: {a.title}"[:100],
+                value=str(a.id),
+                emoji="🔄",
+                default=target is not None and a.id == target.id,
+            )
+            for a in published
+        ]
+        super().__init__(options=options, row=0, custom_id="article:target")
+
+    async def callback(self, interaction: discord.Interaction):
+        view = self.view
+        assert view is not None
+        choice = self.values[0]
+        view.set_target(next((a for a in view.published if str(a.id) == choice), None))
+        for option in self.options:
+            option.default = option.value == choice
+        await interaction.response.edit_message(embed=view.embed(), view=view)
 
 
 class TagSelect(discord.ui.Select["ArticlePanel"]):
@@ -186,15 +244,18 @@ class TagSelect(discord.ui.Select["ArticlePanel"]):
                 discord.SelectOption(label=t.name, value=str(t.id), emoji=t.emoji, default=t.id in chosen)
                 for t in tags
             ],
-            row=0,
+            row=1,
             custom_id="article:tags",
         )
+
+    def show(self, chosen: list[int]) -> None:
+        for option in self.options:
+            option.default = int(option.value) in chosen
 
     async def callback(self, interaction: discord.Interaction):
         assert self.view is not None
         self.view.draft.tags = [int(v) for v in self.values]
-        for option in self.options:
-            option.default = option.value in self.values
+        self.show(self.view.draft.tags)
         await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
 
 
@@ -220,8 +281,9 @@ class ArticlePanel(discord.ui.View):
         cog: ArticlesCog,
         forum: discord.ForumChannel,
         draft: Draft,
-        author_id: int,
-        article: Optional[Article],
+        source: discord.Message,
+        published: list[Article],
+        target: Optional[Article],
         skipped_pictures: int,
         words: int,
     ):
@@ -229,17 +291,32 @@ class ArticlePanel(discord.ui.View):
         self.cog = cog
         self.forum = forum
         self.draft = draft
-        self.author_id = author_id
-        self.article = article
+        self.source = source  # the writer's message with the Word file
+        self.author_id = source.author.id
+        self.published = published
+        self.article: Optional[Article] = None
         self.skipped = skipped_pictures
         self.words = words
         self.message: Optional[discord.Message] = None
         self.busy = False
         self.errors: list[discord.WebhookMessage] = []
+        self.tag_select: Optional[TagSelect] = None
+        if published:
+            self.add_item(TargetSelect(published, target))
         if any(not t.moderated for t in forum.available_tags):
-            self.add_item(TagSelect(forum, draft.tags))
+            self.tag_select = TagSelect(forum, draft.tags)
+            self.add_item(self.tag_select)
+        self.set_target(target)
+
+    def set_target(self, article: Optional[Article]) -> None:
+        """Switch between posting a new article and updating one. Picking an
+        article to update brings in its topics, which the writer can change."""
+        self.article = article
+        self.publish.label = "Update post" if article else "Publish"
         if article:
-            self.publish.label = "Update post"
+            self.draft.tags = list(article.tags)
+            if self.tag_select:
+                self.tag_select.show(self.draft.tags)
 
     def embed(self) -> discord.Embed:
         d = self.draft
@@ -260,8 +337,11 @@ class ArticlePanel(discord.ui.View):
             )
         if self.article:
             lines.append(
-                f"\nThis will replace your post: {_thread_url(self.forum.guild.id, self.article.thread_id)}"
+                f"\n🔄 This will **update** your post: "
+                f"{_thread_url(self.forum.guild.id, self.article.thread_id)}"
             )
+        elif self.published:
+            lines.append("\n📝 This will be a **new** article. To update one instead, pick it in the first menu.")
         action = "Update post" if self.article else "Publish"
         lines.append(f"\nCheck the title, pick topics, then press **Preview** or **{action}**.")
         return discord.Embed(title=f"📰 {d.title}", description="\n".join(lines), color=NEWS_GREEN)
@@ -275,21 +355,31 @@ class ArticlePanel(discord.ui.View):
         return True
 
     async def on_timeout(self):
-        if self.message:
-            try:
-                await self.message.edit(
-                    content="These buttons expired. Drop the file again when you're ready.",
-                    view=None,
-                )
-            except discord.HTTPException:
-                pass
+        # Nobody finished it; clear it away rather than leave dead buttons.
+        await _delete(self.message, self.source)
 
-    async def finish(self, embed: discord.Embed):
+    async def finish(self, interaction: discord.Interaction, embed: discord.Embed):
+        """Tell the writer privately how it went, then clean up the channel."""
         self.stop()
-        if self.message:
-            await self.message.edit(embed=embed, view=None)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        await self.clear_errors()
+        await _delete(self.message, self.source)
 
-    @discord.ui.button(label="Preview", emoji="👀", style=discord.ButtonStyle.secondary, row=1, custom_id="article:preview")
+    async def show_error(self, interaction: discord.Interaction, text: str):
+        """A private error, remembered so a successful retry can clear it."""
+        message = await interaction.followup.send(text, ephemeral=True, wait=True)
+        self.errors.append(message)
+
+    async def clear_errors(self):
+        # Don't leave "I couldn't post…" on screen after it worked.
+        for message in self.errors:
+            try:
+                await message.delete()
+            except discord.HTTPException:
+                pass  # already dismissed, or too old to delete
+        self.errors.clear()
+
+    @discord.ui.button(label="Preview", emoji="👀", style=discord.ButtonStyle.secondary, row=2, custom_id="article:preview")
     async def preview(self, interaction: discord.Interaction, _button: discord.ui.Button):
         d = self.draft
         await interaction.response.send_message(
@@ -314,11 +404,11 @@ class ArticlePanel(discord.ui.View):
                 f"…and {len(d.parts) - PREVIEW_MAX} more message(s).", ephemeral=True
             )
 
-    @discord.ui.button(label="Change title", emoji="✏️", style=discord.ButtonStyle.secondary, row=1, custom_id="article:title")
+    @discord.ui.button(label="Change title", emoji="✏️", style=discord.ButtonStyle.secondary, row=2, custom_id="article:title")
     async def change_title(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await interaction.response.send_modal(TitleModal(self))
 
-    @discord.ui.button(label="Publish", emoji="✅", style=discord.ButtonStyle.success, row=1, custom_id="article:publish")
+    @discord.ui.button(label="Publish", emoji="✅", style=discord.ButtonStyle.success, row=2, custom_id="article:publish")
     async def publish(self, interaction: discord.Interaction, _button: discord.ui.Button):
         if self.busy:
             await interaction.response.send_message("Already working on it…", ephemeral=True)
@@ -333,36 +423,19 @@ class ArticlePanel(discord.ui.View):
         self.busy = True
         await interaction.response.defer()
         try:
-            await self._post(author)
+            await self._post(interaction, author)
         except discord.Forbidden:
             log.exception("Missing permissions posting an article")
             self.busy = False
             await self.show_error(interaction, PERMISSION_HELP)
-            return
         except discord.HTTPException:
             log.exception("Discord error posting an article")
             self.busy = False
             await self.show_error(
                 interaction, "Discord had a problem posting that. Please try again in a minute."
             )
-            return
-        await self.clear_errors()
 
-    async def show_error(self, interaction: discord.Interaction, text: str):
-        """A private error, remembered so a successful retry can clear it."""
-        message = await interaction.followup.send(text, ephemeral=True, wait=True)
-        self.errors.append(message)
-
-    async def clear_errors(self):
-        # Don't leave "I couldn't post…" on screen after it worked.
-        for message in self.errors:
-            try:
-                await message.delete()
-            except discord.HTTPException:
-                pass  # already dismissed, or too old to delete
-        self.errors.clear()
-
-    async def _post(self, author: discord.Member):
+    async def _post(self, interaction: discord.Interaction, author: discord.Member):
         cog, d = self.cog, self.draft
         webhook = await cog.webhook(self.forum)
         title = article_publish.post_title(d.title)
@@ -373,7 +446,9 @@ class ArticlePanel(discord.ui.View):
             except RemovedByModerator:
                 log.info("Article %s was removed by a moderator", self.article.id)
                 mark_article_removed(cog.db_path, self.article.id)
-                await self.finish(discord.Embed(title=f"🚫 {title}", description=REMOVED, color=discord.Color.red()))
+                await self.finish(
+                    interaction, discord.Embed(title=f"🚫 {title}", description=REMOVED, color=discord.Color.red())
+                )
                 return
             update_article(cog.db_path, self.article.id, title, d.tags, ids)
             article_id, thread_id = self.article.id, self.article.thread_id
@@ -383,30 +458,27 @@ class ArticlePanel(discord.ui.View):
             article_id = add_article(cog.db_path, author.id, title, d.tags, thread_id, ids)
             verb = "Published"
         log.info("%s article %s (%s) by %s", verb, article_id, title, author.id)
-        if self.message:
-            add_article_panel(cog.db_path, self.message.id, article_id)
         url = _thread_url(self.forum.guild.id, thread_id)
         await self.finish(
+            interaction,
             discord.Embed(
                 title=f"✅ {verb}: {title}",
                 description=(
                     f"It's live in {self.forum.mention}: {url}\n\n"
-                    "To update it later, **reply to this message** with the new Word file."
+                    "To change it later, drop the new Word file in this channel and pick "
+                    "**Update** in the first menu."
                 ),
                 color=NEWS_GREEN,
-            )
+            ),
         )
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, row=1, custom_id="article:cancel")
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, row=2, custom_id="article:cancel")
     async def cancel(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await interaction.response.defer()
         await self.finish(
-            discord.Embed(description="Cancelled. Nothing was posted.", color=discord.Color.light_grey())
+            interaction,
+            discord.Embed(description="Cancelled. Nothing was posted.", color=discord.Color.light_grey()),
         )
-
-
-EXPIRED = "These buttons stopped working because the bot restarted. Please drop the Word file again."
-PANEL_IDS = ("article:tags", "article:preview", "article:title", "article:publish", "article:cancel")
 
 
 class ExpiredArticlePanel(discord.ui.View):
@@ -420,7 +492,7 @@ class ExpiredArticlePanel(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         for custom_id in PANEL_IDS:
-            if custom_id == "article:tags":
+            if custom_id in ("article:tags", "article:target"):
                 item = discord.ui.Select(custom_id=custom_id, options=[discord.SelectOption(label="-")])
             else:
                 item = discord.ui.Button(custom_id=custom_id)
@@ -429,8 +501,13 @@ class ExpiredArticlePanel(discord.ui.View):
 
     async def expired(self, interaction: discord.Interaction):
         await interaction.response.send_message(EXPIRED, ephemeral=True)
-        if interaction.message is not None:
+        message = interaction.message
+        if message is None:
+            return
+        source = None
+        if message.reference and message.reference.message_id:
             try:
-                await interaction.message.edit(view=None)
+                source = await message.channel.fetch_message(message.reference.message_id)
             except discord.HTTPException:
-                pass
+                source = None
+        await _delete(message, source)

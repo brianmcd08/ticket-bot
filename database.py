@@ -101,14 +101,6 @@ def init_db(db_path):
                     updated_at TEXT NOT NULL
                 )
             """)
-            # The bot's "Published" replies in the submit channel. Replying to
-            # any of them with a new Word file updates that article.
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS article_panels (
-                    message_id INTEGER PRIMARY KEY,
-                    article_id INTEGER NOT NULL
-                )
-            """)
             # One row per ESPN match the bot has posted about. Lets a restart
             # mid-match keep editing the same scoreboard message and never send
             # the start or final post twice.
@@ -342,27 +334,20 @@ def mark_article_removed(db_path, article_id):
             )
 
 
-def add_article_panel(db_path, message_id, article_id):
-    with closing(sqlite3.connect(database=db_path)) as conn:
-        with conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO article_panels (message_id, article_id) VALUES (?, ?)",
-                (message_id, article_id),
-            )
-
-
-def article_for_panel(db_path, message_id) -> Optional[Article]:
+def articles_by_author(db_path, author_id) -> list[Article]:
+    """A writer's live articles, most recently changed first (the choices
+    for "Update: ..." when they drop a new file)."""
     with closing(sqlite3.connect(database=db_path)) as conn:
         conn.row_factory = sqlite3.Row
-        row = conn.execute(
+        rows = conn.execute(
             """
-            SELECT a.* FROM articles a
-            JOIN article_panels p ON p.article_id = a.id
-            WHERE p.message_id = ?
+            SELECT * FROM articles
+            WHERE author_id = ? AND status = 'published'
+            ORDER BY updated_at DESC, id DESC
             """,
-            (message_id,),
-        ).fetchone()
-    return _article(row) if row else None
+            (author_id,),
+        ).fetchall()
+    return [_article(r) for r in rows]
 
 
 def update_message_id(db_path, listing_id, message_id):

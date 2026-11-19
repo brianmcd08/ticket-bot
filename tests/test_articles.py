@@ -10,8 +10,7 @@ from article_publish import Draft, RemovedByModerator, post_title, publish, upda
 from article_render import Part
 from database import (
     add_article,
-    add_article_panel,
-    article_for_panel,
+    articles_by_author,
     init_db,
     mark_article_removed,
     update_article,
@@ -229,24 +228,28 @@ def db(tmp_path):
     return path
 
 
-def test_article_records_and_panels(db):
-    article_id = add_article(db, 7, "Title", [11], 500, [1, 2])
-    add_article_panel(db, 900, article_id)
-    add_article_panel(db, 901, article_id)  # the panel after an update
+def test_writers_published_articles_newest_first(db):
+    first = add_article(db, 7, "First", [11], 500, [1])
+    second = add_article(db, 7, "Second", [], 501, [2])
+    add_article(db, 8, "Someone else's", [], 502, [3])
+    assert [a.title for a in articles_by_author(db, 7)] == ["Second", "First"]
 
-    for panel in (900, 901):
-        found = article_for_panel(db, panel)
-        assert found is not None
-        assert (found.author_id, found.thread_id, found.message_ids, found.status) == (7, 500, [1, 2], "published")
-    assert article_for_panel(db, 123) is None
+    update_article(db, first, "First, revised", [12], [1, 4])
+    found = articles_by_author(db, 7)
+    assert [a.title for a in found] == ["First, revised", "Second"]
+    assert (found[0].tags, found[0].message_ids, found[0].thread_id) == ([12], [1, 4], 500)
 
-    update_article(db, article_id, "New", [12], [1, 2, 3])
-    found = article_for_panel(db, 900)
-    assert found and (found.title, found.tags, found.message_ids) == ("New", [12], [1, 2, 3])
+    mark_article_removed(db, second)
+    assert [a.title for a in articles_by_author(db, 7)] == ["First, revised"]
 
-    mark_article_removed(db, article_id)
-    found = article_for_panel(db, 901)
-    assert found and found.status == "removed"
+
+def test_matching_article_by_title():
+    from cogs.articles import matching_article
+    from database import Article
+
+    published = [Article(1, 7, "Panthers Roll  Past FSU", [], 5, [], "published")]
+    assert matching_article(published, "panthers roll past fsu") is published[0]
+    assert matching_article(published, "Something else") is None
 
 
 def test_cover_file_names():
@@ -254,30 +257,40 @@ def test_cover_file_names():
     assert article_publish._cover_file(PNG).filename == "cover.png"
 
 
-def test_leftover_buttons_after_a_restart_explain_themselves():
+def test_leftover_buttons_after_a_restart_explain_and_clean_up():
     from cogs.articles import EXPIRED, PANEL_IDS, ExpiredArticlePanel
+
+    deleted = []
+
+    class Msg:
+        def __init__(self, name, reference=None):
+            self.name = name
+            self.reference = reference
+            self.channel = SimpleNamespace(fetch_message=self.fetch)
+
+        async def fetch(self, message_id):
+            return Msg("writer's file")
+
+        async def delete(self):
+            deleted.append(self.name)
 
     async def scenario():
         view = ExpiredArticlePanel()
         assert sorted(getattr(i, "custom_id") for i in view.children) == sorted(PANEL_IDS)
-        sent, edited = [], []
+        sent = []
 
         async def send_message(text, ephemeral):
             sent.append((text, ephemeral))
 
-        async def edit(view):
-            edited.append(view)
-
         interaction = SimpleNamespace(
             response=SimpleNamespace(send_message=send_message),
-            message=SimpleNamespace(edit=edit),
+            message=Msg("bot reply", reference=SimpleNamespace(message_id=5)),
         )
         await view.expired(interaction)
-        return sent, edited
+        return sent
 
-    sent, edited = run(scenario())
-    assert sent == [(EXPIRED, True)]
-    assert edited == [None]
+    assert run(scenario()) == [(EXPIRED, True)]
+    assert deleted == ["bot reply", "writer's file"]
 
 
 def test_live_panel_uses_the_same_button_ids():
@@ -287,7 +300,7 @@ def test_live_panel_uses_the_same_button_ids():
         getattr(ArticlePanel, name).__discord_ui_model_kwargs__["custom_id"]
         for name in ArticlePanel.__view_children_items__
     }
-    assert ids | {"article:tags"} == set(PANEL_IDS)
+    assert ids | {"article:tags", "article:target"} == set(PANEL_IDS)
 
 
 def test_successful_retry_clears_earlier_errors():
