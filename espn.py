@@ -22,19 +22,36 @@ BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
 PITT_TEAM_ID = "221"
 EASTERN = ZoneInfo("America/New_York")
 
-# Adding a sport is one entry here (and a channel/role in config).
+# Sports with live scores. Wrestling isn't here: ESPN has no feed for it.
 SPORT_PATHS: dict[Sport, str] = {
     Sport.VOLLEYBALL: "volleyball/womens-college-volleyball",
     Sport.MENS_BASKETBALL: "basketball/mens-college-basketball",
     Sport.WOMENS_BASKETBALL: "basketball/womens-college-basketball",
+    Sport.FOOTBALL: "football/college-football",
+    Sport.BASEBALL: "baseball/college-baseball",
+    Sport.MENS_SOCCER: "soccer/usa.ncaa.m.1",
+    Sport.WOMENS_SOCCER: "soccer/usa.ncaa.w.1",
 }
+
+# Pitt's ESPN team id is 221 in most sports, but soccer and baseball number
+# their teams separately.
+TEAM_IDS: dict[Sport, str] = {
+    Sport.BASEBALL: "115",
+    Sport.MENS_SOCCER: "5744",
+    Sport.WOMENS_SOCCER: "20468",
+}
+
+
+def pitt_team_id(sport: Sport) -> str:
+    return TEAM_IDS.get(sport, PITT_TEAM_ID)
 
 # Extra scoreboard filter. The basketball scoreboard shows only a handful of
 # featured games unless asked for all of Division I (group 50), which would
-# leave Pitt out; volleyball returns nothing if given that filter.
+# leave Pitt out. Volleyball and soccer return nothing if given that filter.
 SCOREBOARD_GROUPS: dict[Sport, str] = {
     Sport.MENS_BASKETBALL: "50",
     Sport.WOMENS_BASKETBALL: "50",
+    Sport.FOOTBALL: "80",  # FBS; the default today, pinned in case it changes
 }
 
 TIMEOUT = aiohttp.ClientTimeout(total=15)
@@ -52,7 +69,11 @@ class Team:
     name: str  # short display name, e.g. "Pitt"
     abbreviation: str
     score: Optional[int]  # sets won in volleyball, points otherwise; None before
-    periods: tuple[int, ...]  # points per set, half or quarter (then overtimes)
+    periods: tuple[int, ...]  # points per set, half, quarter or inning
+    hits: Optional[int] = None  # baseball only
+    errors: Optional[int] = None  # baseball only
+    shootout: Optional[int] = None  # soccer penalty shootout goals
+    winner: Optional[bool] = None  # ESPN's call; settles a shootout
 
 
 @dataclass(frozen=True)
@@ -112,6 +133,10 @@ def _parse_team(competitor: dict) -> Team:
         abbreviation=team.get("abbreviation", "?"),
         score=_parse_score(competitor.get("score")),
         periods=_parse_periods(competitor.get("linescores")),
+        hits=_parse_score(competitor.get("hits")),
+        errors=_parse_score(competitor.get("errors")),
+        shootout=_parse_score(competitor.get("shootoutScore")),
+        winner=competitor.get("winner"),
     )
 
 

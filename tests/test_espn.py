@@ -89,3 +89,18 @@ def test_basketball_scoreboard_asks_for_all_of_division_one():
         "scoreboard?dates=20261117&limit=500&groups=50"
     )
     assert scoreboard_url(Sport.VOLLEYBALL, day).endswith("dates=20261117&limit=500")
+
+
+def test_pitt_team_ids_differ_for_soccer_and_baseball():
+    from espn import pitt_team_id
+
+    assert pitt_team_id(Sport.FOOTBALL) == "221"
+    assert pitt_team_id(Sport.BASEBALL) == "115"
+    assert pitt_team_id(Sport.MENS_SOCCER) == "5744"
+    assert pitt_team_id(Sport.WOMENS_SOCCER) == "20468"
+
+
+def test_wrestling_has_no_score_feed():
+    from espn import SPORT_PATHS
+
+    assert Sport.WRESTLING not in SPORT_PATHS

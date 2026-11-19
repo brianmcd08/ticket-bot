@@ -54,6 +54,13 @@ class SportChannels:
         return "\n".join(lines)
 
 
+# Sports with no channel of their own. Their listings go to the main channel
+# like everyone else's; this just means a sport channel never implies them.
+NO_CHANNEL: frozenset[Sport] = frozenset(
+    {Sport.MENS_SOCCER, Sport.WOMENS_SOCCER, Sport.WRESTLING}
+)
+
+
 def build(
     channel_id: int,
     football: Optional[str] = None,

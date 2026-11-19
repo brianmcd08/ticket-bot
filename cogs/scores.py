@@ -1,6 +1,7 @@
 """Live scores: one scoreboard message per game in #live-scores, kept current.
 
-Covers every sport in espn.SPORT_PATHS (volleyball and both basketballs).
+Covers every sport in espn.SPORT_PATHS: football, volleyball, both
+basketballs, baseball and both soccers. Wrestling has no ESPN feed.
 
 Every minute the loop looks at the team's cached schedule. Only a match that
 starts soon or started in the last few hours is fetched from ESPN, so on a
@@ -42,16 +43,26 @@ SCHEDULE_RETRY = timedelta(minutes=10)
 # Start fetching a little before first serve, in case ESPN's clock runs early.
 LEAD = timedelta(minutes=15)
 # Stop fetching this long after the scheduled start. A five-set volleyball
-# match with delays fits comfortably; a match ESPN never marks final just
-# drops out instead of being polled forever.
+# match or a multi-overtime basketball game fits comfortably; a game ESPN
+# never marks final just drops out instead of being polled forever.
 WINDOW = timedelta(hours=5)
+# Football runs 3.5-4 hours before any weather delay, and baseball can add
+# extra innings and rain delays, so they get longer.
+SPORT_WINDOWS: dict[Sport, timedelta] = {
+    Sport.FOOTBALL: timedelta(hours=8),
+    Sport.BASEBALL: timedelta(hours=8),
+}
 
 SPORTS: tuple[Sport, ...] = tuple(espn.SPORT_PATHS)
 
 
 def active_games(schedule: list[Game], now: datetime) -> list[Game]:
-    """Matches worth fetching right now."""
-    return [g for g in schedule if g.start - LEAD <= now <= g.start + WINDOW]
+    """Games worth fetching right now."""
+    return [
+        g
+        for g in schedule
+        if g.start - LEAD <= now <= g.start + SPORT_WINDOWS.get(g.sport, WINDOW)
+    ]
 
 
 def _mentions(role_id: Optional[int]) -> discord.AllowedMentions:
@@ -129,16 +140,20 @@ async def sync_game(
 
 
 class ScoresCog(commands.Cog):
-    def __init__(self, bot, db_path, channel_id: Optional[int], team_id: str):
+    def __init__(self, bot, db_path, channel_id: Optional[int], team_id: Optional[str]):
         self.bot = bot
         self.db_path = db_path
         self.channel_id = channel_id
+        # None follows Pitt; set only for testing (SCORES_TEAM_ID).
         self.team_id = team_id
         self.session: Optional[aiohttp.ClientSession] = None
         # sport -> (when to refresh next, games)
         self.schedules: dict[Sport, tuple[datetime, list[Game]]] = {}
         # event_id -> last embed sent, to skip edits when nothing changed
         self.last_embeds: dict[str, discord.Embed] = {}
+
+    def _team(self, sport: Sport) -> str:
+        return self.team_id or espn.pitt_team_id(sport)
 
     async def cog_load(self):
         if not self.channel_id:
@@ -157,9 +172,11 @@ class ScoresCog(commands.Cog):
         refresh_at, games = self.schedules.get(sport, (now, []))
         if now >= refresh_at:
             try:
-                games = await espn.fetch_schedule(self.session, sport, self.team_id)
+                games = await espn.fetch_schedule(self.session, sport, self._team(sport))
                 refresh_at = now + SCHEDULE_REFRESH
-                log.info("Loaded %s %s match(es) for team %s", len(games), sport.value, self.team_id)
+                log.info(
+                    "Loaded %s %s game(s) for team %s", len(games), sport.value, self._team(sport)
+                )
             except (aiohttp.ClientError, TimeoutError, ValueError, KeyError):
                 log.warning("Could not load the %s schedule; retrying soon", sport.value, exc_info=True)
                 refresh_at = now + SCHEDULE_RETRY
@@ -188,7 +205,7 @@ class ScoresCog(commands.Cog):
                         self.db_path,
                         channel,
                         game,
-                        self.team_id,
+                        self._team(sport),
                         get_sport_role(self.db_path, sport),
                         self.last_embeds,
                     )

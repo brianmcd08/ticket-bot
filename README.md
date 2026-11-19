@@ -23,7 +23,7 @@ Use this when you have tickets you want to give away or sell.
 - **Quantity** — number of tickets
 
 **Optional:**
-- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, or Baseball. Can be left blank when you run the command inside a sport's channel; it's taken from the channel. If the channel doesn't say (or covers both basketball teams), the bot asks with a dropdown.
+- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, Baseball, Men's Soccer, Women's Soccer, or Wrestling. Can be left blank when you run the command inside a sport's channel; it's taken from the channel. If the channel doesn't say (or covers both basketball teams), the bot asks with a dropdown.
 - **Notes** — game time, section, row, asking price, or anything else useful
 
 > Listings are identified by the game date. There's no start time field, since matching works on the day; put the tip-off time in **Notes** if it matters.
@@ -35,7 +35,7 @@ Use this when you have tickets you want to give away or sell.
 Use this when you need tickets to a game. Nothing is required if you run it inside a sport's channel; be as specific or open-ended as you like.
 
 **Optional:**
-- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, or Baseball. Can be left blank inside a sport's channel.
+- **Sport** — Football, Men's Basketball, Women's Basketball, Volleyball, Baseball, Men's Soccer, Women's Soccer, or Wrestling. Can be left blank inside a sport's channel.
 - **Month**, **Day**, **Year** — specify a particular game (provide all three or none)
 - **Quantity** — number of tickets you need
 - **Notes** — anything else worth mentioning
@@ -89,7 +89,7 @@ Useful for resetting between seasons, or after testing.
 
 ### `/rolepanel` — Post the sport notification buttons
 
-Run it in the channel where members should pick their roles. It creates any missing sport roles (Football, Men's Basketball, Women's Basketball, Volleyball, Baseball) and posts a message with one button per sport; tapping a button adds or removes that role. A new listing pings its sport's role, and live scores will too.
+Run it in the channel where members should pick their roles. It creates any missing sport roles (one per sport above) and posts a message with one button per sport; tapping a button adds or removes that role. A new listing pings its sport's role, and so do live scores. When a sport is added, run it again: it creates the new roles and posts a fresh panel with every button, so delete the old panel.
 
 The bot needs the **Manage Roles** permission, and its own role must sit **above** the sport roles in Server Settings → Roles (new roles are created at the bottom, so this is normally already true). The buttons keep working after restarts. Running it again posts a fresh panel and recreates any role that was deleted; delete the old panel message yourself.
 
@@ -185,7 +185,7 @@ The bot is designed to run as a `systemd` service (e.g. on a Raspberry Pi).
    ```
    New listings always go to `CHANNEL_ID`. The per-sport channel IDs are used to fill in the sport when `/have` or `/want` is run inside that channel, and to find listing posts made before listings moved to one channel, so keep them set. Any left blank fall back to `DEFAULT_SPORT_CHANNEL_ID`, and if that is blank too, to `CHANNEL_ID` — so an incomplete `.env` degrades to single-channel behaviour instead of failing to start. The resolved routing is printed at startup; check it with `journalctl -u ticket-bot`.
 
-   `SCORES_CHANNEL_ID` is where live scores are posted; leave it blank and no scores are posted. Volleyball, men's basketball and women's basketball are covered. For each Pitt game the bot posts a scoreboard when the game goes live and keeps editing it, posts a start message that pings that sport's role, and posts the final score with another ping. It checks once a minute but only calls ESPN from 15 minutes before a game until 5 hours after its start. `SCORES_TEAM_ID` follows a different ESPN team instead of Pitt (221). It's meant for testing on the dev server, so leave it blank in the Pi's `.env`.
+   `SCORES_CHANNEL_ID` is where live scores are posted; leave it blank and no scores are posted. Every sport except wrestling is covered (ESPN has no wrestling feed). For each Pitt game the bot posts a scoreboard when the game goes live and keeps editing it, posts a start message that pings that sport's role, and posts the final score with another ping. It checks once a minute but only calls ESPN from 15 minutes before a game until 5 hours after its start (8 for football and baseball). `SCORES_TEAM_ID` follows a different ESPN team instead of Pitt (221). It's meant for testing on the dev server, so leave it blank in the Pi's `.env`.
 
    `CHANNEL_ID` is also used for server-wide announcements, such as the notice `/clear` posts.
 

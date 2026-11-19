@@ -153,3 +153,96 @@ def test_neutral_site_says_vs_even_when_listed_away():
         "🏀 Pitt vs Villanova is underway"
     )
     assert scoreboard_embed(game).title == "🏀 Pitt vs Villanova"
+
+
+# ---------- football ----------
+
+
+def test_football_table_quarters_and_final():
+    game = make_game(
+        sport=Sport.FOOTBALL,
+        state=GameState.FINAL,
+        detail="Final",
+        pitt=(10, (0, 7, 3, 0)),
+        opp=(16, (3, 3, 7, 3)),
+        opp_name=("Florida St", "FSU"),
+    )
+    assert scoreboard_embed(game).title == "🏈 Florida St at Pitt"
+    assert score_table(game) == (
+        "       1   2   3   4   T\n"
+        "FSU    3   3   7   3  16\n"
+        "PITT   0   7   3   0  10"
+    )
+    assert final_message(game, PITT_TEAM_ID, None) == "🏈 Final: Florida St def. Pitt 16-10"
+
+
+# ---------- baseball and soccer ----------
+
+
+def other(sport, pitt, opp, opp_name, pitt_extra=None, opp_extra=None):
+    game = make_game(
+        sport=sport, state=GameState.FINAL, detail="Final",
+        pitt=pitt, opp=opp, opp_name=opp_name,
+    )
+    from dataclasses import replace
+
+    # make_game puts Pitt at home.
+    return replace(
+        game,
+        home=replace(game.home, **(pitt_extra or {})),
+        away=replace(game.away, **(opp_extra or {})),
+    )
+
+
+def test_baseball_line_score_with_runs_hits_errors():
+    game = other(
+        Sport.BASEBALL,
+        pitt=(13, (3, 3, 0, 0, 2, 4, 0, 1)),
+        opp=(5, (2, 0, 1, 0, 0, 1, 0, 0, 1)),
+        opp_name=("Wake Forest", "WAKE"),
+        pitt_extra={"hits": 22, "errors": 0},
+        opp_extra={"hits": 13, "errors": 2},
+    )
+    assert score_table(game) == (
+        "      1  2  3  4  5  6  7  8  9   R  H  E\n"
+        "WAKE  2  0  1  0  0  1  0  0  1   5 13  2\n"
+        "PITT  3  3  0  0  2  4  0  1     13 22  0"
+    )
+    assert final_message(game, PITT_TEAM_ID, None) == "⚾ Final: Pitt def. Wake Forest 13-5"
+
+
+def test_baseball_extra_innings_noted():
+    game = other(
+        Sport.BASEBALL,
+        pitt=(4, (0,) * 9 + (4,)),
+        opp=(3, (0,) * 8 + (3, 0)),
+        opp_name=("Wake Forest", "WAKE"),
+    )
+    assert final_message(game, PITT_TEAM_ID, None).endswith("4-3 (10 innings)")
+    assert score_table(game).splitlines()[0].startswith("      1  2  3  4  5  6  7  8  9 10")
+
+
+def test_soccer_draw_puts_pitt_first():
+    game = other(Sport.WOMENS_SOCCER, pitt=(2, ()), opp=(2, ()), opp_name=("SMU", "SMU"))
+    assert final_message(game, PITT_TEAM_ID, ROLE) == "<@&555> ⚽ Final: Pitt 2, SMU 2 (draw)"
+    assert score_table(game) == "       T\nSMU    2\nPITT   2"
+
+
+def test_soccer_shootout_uses_espn_winner():
+    game = other(
+        Sport.MENS_SOCCER,
+        pitt=(1, ()),
+        opp=(1, ()),
+        opp_name=("Syracuse", "SYR"),
+        pitt_extra={"shootout": 6, "winner": False},
+        opp_extra={"shootout": 7, "winner": True},
+    )
+    assert final_message(game, PITT_TEAM_ID, None) == (
+        "⚽ Final: Syracuse def. Pitt 1-1 (7-6 on penalties)"
+    )
+    assert score_table(game) == "       T  PK\nSYR    1   7\nPITT   1   6"
+
+
+def test_soccer_win():
+    game = other(Sport.MENS_SOCCER, pitt=(2, ()), opp=(0, ()), opp_name=("Boston College", "BC"))
+    assert final_message(game, PITT_TEAM_ID, None) == "⚽ Final: Pitt def. Boston College 2-0"

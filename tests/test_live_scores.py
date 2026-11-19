@@ -164,3 +164,24 @@ def test_active_window():
     assert active_games([game], START - timedelta(minutes=14)) == [game]
     assert active_games([game], START + timedelta(hours=4, minutes=59)) == [game]
     assert active_games([game], START + timedelta(hours=5, minutes=1)) == []
+
+
+def test_football_gets_a_longer_window():
+    from enums import Sport
+
+    game = make_game(sport=Sport.FOOTBALL)
+    assert active_games([game], START + timedelta(hours=7)) == [game]
+    assert active_games([game], START + timedelta(hours=8, minutes=1)) == []
+
+
+def test_cog_follows_pitt_per_sport_unless_overridden(db):
+    from cogs.scores import ScoresCog
+    from enums import Sport
+
+    pitt = ScoresCog(bot=None, db_path=db, channel_id=1, team_id=None)
+    assert pitt._team(Sport.FOOTBALL) == "221"
+    assert pitt._team(Sport.MENS_SOCCER) == "5744"
+    assert pitt.last_embeds == {} and pitt.schedules == {}
+
+    test = ScoresCog(bot=None, db_path=db, channel_id=1, team_id="2006")
+    assert test._team(Sport.MENS_SOCCER) == "2006"

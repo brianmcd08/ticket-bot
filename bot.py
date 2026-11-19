@@ -78,7 +78,7 @@ class TicketBot(commands.Bot):
         # the resolved routing to make a missing .env entry visible.
         print(
             f"Scores channel: {settings.scores_channel_id or '(not set)'} "
-            f"(team {settings.scores_team_id})"
+            f"(team {settings.scores_team_id or 'Pitt'})"
         )
         print("Sport channel routing:")
         print(settings.sport_channels.describe())

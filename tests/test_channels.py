@@ -44,8 +44,11 @@ def test_both_basketballs_share_one_channel(routing):
 
 
 def test_every_sport_in_the_enum_is_mapped(routing):
-    """A new Sport member must not silently land in the fallback unnoticed."""
-    unmapped = [s for s in Sport if routing.channel_id_for(s) == DEFAULT_ID]
+    """A new Sport member must not silently land in the fallback unnoticed:
+    it either gets a channel or is listed in NO_CHANNEL on purpose."""
+    unmapped = [
+        s for s in Sport if routing.channel_id_for(s) == DEFAULT_ID and s not in channels.NO_CHANNEL
+    ]
     assert unmapped == []
 
 
