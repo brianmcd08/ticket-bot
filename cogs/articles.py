@@ -235,6 +235,7 @@ class ArticlePanel(discord.ui.View):
         self.words = words
         self.message: Optional[discord.Message] = None
         self.busy = False
+        self.errors: list[discord.WebhookMessage] = []
         if any(not t.moderated for t in forum.available_tags):
             self.add_item(TagSelect(forum, draft.tags))
         if article:
@@ -336,13 +337,30 @@ class ArticlePanel(discord.ui.View):
         except discord.Forbidden:
             log.exception("Missing permissions posting an article")
             self.busy = False
-            await interaction.followup.send(PERMISSION_HELP, ephemeral=True)
+            await self.show_error(interaction, PERMISSION_HELP)
+            return
         except discord.HTTPException:
             log.exception("Discord error posting an article")
             self.busy = False
-            await interaction.followup.send(
-                "Discord had a problem posting that. Please try again in a minute.", ephemeral=True
+            await self.show_error(
+                interaction, "Discord had a problem posting that. Please try again in a minute."
             )
+            return
+        await self.clear_errors()
+
+    async def show_error(self, interaction: discord.Interaction, text: str):
+        """A private error, remembered so a successful retry can clear it."""
+        message = await interaction.followup.send(text, ephemeral=True, wait=True)
+        self.errors.append(message)
+
+    async def clear_errors(self):
+        # Don't leave "I couldn't post…" on screen after it worked.
+        for message in self.errors:
+            try:
+                await message.delete()
+            except discord.HTTPException:
+                pass  # already dismissed, or too old to delete
+        self.errors.clear()
 
     async def _post(self, author: discord.Member):
         cog, d = self.cog, self.draft

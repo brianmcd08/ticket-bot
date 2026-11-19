@@ -288,3 +288,25 @@ def test_live_panel_uses_the_same_button_ids():
         for name in ArticlePanel.__view_children_items__
     }
     assert ids | {"article:tags"} == set(PANEL_IDS)
+
+
+def test_successful_retry_clears_earlier_errors():
+    from cogs.articles import ArticlePanel
+
+    deleted = []
+
+    class Msg:
+        def __init__(self, n):
+            self.n = n
+
+        async def delete(self):
+            deleted.append(self.n)
+
+    async def scenario():
+        panel = ArticlePanel.__new__(ArticlePanel)  # skip Discord setup
+        panel.errors = [Msg(1), Msg(2)]
+        await panel.clear_errors()
+        return panel.errors
+
+    assert run(scenario()) == []
+    assert deleted == [1, 2]
